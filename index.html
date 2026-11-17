@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Trail Summit Challenge</title>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{--bg:#0b1220;--panel:#121c30;--line:#24324f;--txt:#eef3fb;--mut:#93a3c0;--blue:#1e5bff;--acc:#ffd23f;--ok:#22c55e;--bad:#ef4444}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer;border:0;border-radius:12px;padding:.7em 1.2em;background:var(--blue);font-weight:700}
+button.ghost{background:transparent;border:1.5px solid var(--line)}
+button:disabled{opacity:.4;cursor:default}
+input,select,textarea{font:inherit;color:var(--txt);background:#0c1424;border:1.5px solid var(--line);border-radius:8px;padding:.5em .6em;width:100%}
+.hide{display:none!important}
+.screen{position:fixed;inset:0}
+h1,h2,h3{margin:0;letter-spacing:.02em}
+.tag{font-size:.75em;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);font-weight:800}
+
+/* MENU */
+#menu{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;text-align:center;padding:24px;
+ background:radial-gradient(1200px 600px at 50% 110%,#1b3a8a 0,#0b1220 60%)}
+#menu h1{font-size:clamp(34px,6vw,76px);font-weight:900;font-style:italic;text-transform:uppercase}
+#menu p{color:var(--mut);max-width:560px;margin:0}
+#menu .row{display:flex;gap:16px;flex-wrap:wrap;justify-content:center}
+#menu button{font-size:20px;padding:.9em 1.8em}
+
+/* HOST */
+#host canvas{position:absolute;inset:0;width:100%;height:100%}
+#hud{position:absolute;left:2vw;top:2vh;text-shadow:0 2px 8px #0008}
+#hud .ttl{font-size:2.2vh;font-weight:800;opacity:.9}
+#hud .rnd{font-size:4.4vh;font-weight:900;font-style:italic;text-transform:uppercase}
+#hud .tim{font-size:9vh;font-weight:900;font-variant-numeric:tabular-nums;line-height:1;color:var(--acc)}
+#roomtag{position:absolute;left:2vw;bottom:9vh;background:#0009;border-radius:10px;padding:.5vh 1vw;font-size:1.9vh;color:#cfd9ee}
+#roomtag b{color:#fff;letter-spacing:.2em}
+#board{position:absolute;right:0;top:0;bottom:0;width:24vw;background:linear-gradient(180deg,#0e1830ee,#0b1220f5);border-left:1px solid var(--line);padding:2vh 1.2vw;display:flex;flex-direction:column;gap:1vh;overflow:hidden}
+#board h3{font-size:2vh;color:var(--mut);letter-spacing:.2em;text-transform:uppercase}
+.brow{display:grid;grid-template-columns:2.6vh 1fr auto;gap:.8vw;align-items:center;background:var(--panel);border-radius:10px;padding:1vh .8vw;border-left:.5vw solid var(--c);transition:transform .3s}
+.brow .rk{font-weight:900;font-size:2.4vh;color:var(--mut)}
+.brow .nm{font-weight:800;font-size:2.1vh;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brow .sub{font-size:1.4vh;color:var(--mut)}
+.brow .pc{font-weight:900;font-size:2.4vh;font-variant-numeric:tabular-nums}
+.brow .bar{grid-column:1/-1;height:.8vh;background:#0a1120;border-radius:9px;overflow:hidden}
+.brow .bar i{display:block;height:100%;width:0;background:var(--c);transition:width .15s}
+#ctrl{position:absolute;left:0;right:24vw;bottom:0;display:flex;gap:1vw;padding:1.5vh 2vw;align-items:center;background:linear-gradient(0deg,#0b1220ee,#0b122000)}
+#ctrl button{font-size:2vh}
+#ctrl .sp{flex:1}
+#ctrl .info{font-size:1.8vh;color:var(--mut)}
+#lobby{position:absolute;left:0;right:24vw;top:0;bottom:8vh;display:flex;align-items:center;justify-content:center;gap:4vw;padding:4vh 3vw;background:#0b1220cc;backdrop-filter:blur(3px)}
+#lobby .join{text-align:center}
+#qr{background:#fff;padding:1.4vh;border-radius:14px;display:inline-block;min-width:20vh;min-height:20vh}
+#qr img,#qr canvas{width:30vh!important;height:30vh!important;display:block}
+#lobby .code{font-size:7vh;font-weight:900;letter-spacing:.25em;color:var(--acc)}
+#lobby .url{font-size:1.7vh;color:var(--mut);word-break:break-all;max-width:36vh;margin:auto}
+#lobby .teams{flex:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(20vh,1fr));gap:1.2vh;align-content:center;max-height:100%;overflow:auto}
+.tcard{background:var(--panel);border-radius:12px;border-top:.8vh solid var(--c);padding:1.2vh}
+.tcard b{font-size:2.2vh}
+.tcard .cnt{float:right;color:var(--mut);font-size:1.8vh}
+.chips{display:flex;flex-wrap:wrap;gap:.5vh;margin-top:.8vh;min-height:3vh}
+.chip{background:#0a1120;border-radius:99px;padding:.3vh 1vh;font-size:1.6vh}
+.chip.off{opacity:.35}
+#center{position:absolute;left:3vw;right:27vw;top:17vh;text-align:center;pointer-events:none}
+#center .card{display:inline-block;background:#0b1220e6;border:1px solid var(--line);border-radius:18px;padding:3vh 3vw;max-width:100%;box-shadow:0 20px 60px #0008}
+#center h2{font-size:6vh;font-weight:900;font-style:italic;text-transform:uppercase}
+#center p{font-size:3vh;color:#cfd9ee;margin:1vh 0 0}
+#center .big{font-size:14vh;font-weight:900;color:var(--acc);line-height:1}
+#center .q{font-size:4.2vh;font-weight:800;max-width:60vw}
+#center .opts{display:grid;grid-template-columns:1fr 1fr;gap:1.4vh;margin-top:2.4vh;text-align:left}
+#center .opt{background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:1.4vh 1.4vw;font-size:2.8vh;font-weight:700}
+#center .opt.ok{background:#14532d;border-color:var(--ok)}
+#center .opt.no{opacity:.4}
+#center .opt b{color:var(--acc);margin-right:.6em}
+.podium{display:flex;flex-direction:column;gap:1vh;margin-top:2vh;text-align:left;min-width:36vw}
+.podium div{display:flex;gap:1vw;align-items:center;font-size:3vh;font-weight:800;background:var(--panel);border-left:.6vw solid var(--c);border-radius:10px;padding:1vh 1vw}
+.podium div:first-child{font-size:4.4vh;background:#3a2f06}
+.podium span{flex:1}
+#warn{position:absolute;left:50%;top:1vh;transform:translateX(-50%);background:#7c2d12;border-radius:8px;padding:.6vh 1.2vw;font-size:1.7vh;z-index:5}
+
+/* ADMIN */
+#admin{overflow:auto;padding:24px;max-width:1000px;margin:auto;position:fixed}
+#admin{left:0;right:0}
+#admin h1{font-size:28px;margin-bottom:6px}
+#admin section{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;margin:18px 0}
+#admin h2{font-size:18px;margin-bottom:12px;color:var(--acc)}
+#admin label{font-size:12px;color:var(--mut);display:block;margin-bottom:4px}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+.item{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;background:#0e1728}
+.item .head{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.item .head b{flex:1}
+.mini{padding:.3em .7em;font-size:13px;border-radius:8px}
+.danger{background:#7f1d1d}
+.optrow{display:grid;grid-template-columns:24px 1fr;gap:8px;align-items:center;margin-top:6px}
+.optrow input[type=radio]{width:18px;height:18px}
+.bar-top{position:sticky;top:-24px;background:var(--bg);padding:12px 0;display:flex;gap:10px;flex-wrap:wrap;z-index:3;align-items:center}
+input[type=color]{padding:2px;height:38px}
+#saved{color:var(--ok);font-weight:700}
+
+/* PHONE */
+#phone{display:flex;flex-direction:column;background:var(--bg);--c:#1e5bff}
+#phead{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--c);font-weight:800}
+#phead span{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#phead small{font-weight:600;opacity:.85}
+#pbody{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:20px;text-align:center;overflow:auto}
+#pbody h2{font-size:28px;font-weight:900;font-style:italic;text-transform:uppercase}
+#pbody p{color:#cfd9ee;margin:0;font-size:17px}
+#pbody .big{font-size:84px;font-weight:900;color:var(--acc);line-height:1}
+#pbody input{font-size:22px;text-align:center;padding:.7em}
+#pbody button{font-size:20px;width:100%;padding:1em}
+#pad{width:min(78vw,56vh);height:min(78vw,56vh);border-radius:50%;background:radial-gradient(circle at 50% 35%,#ffffff22,#0000 60%),var(--c);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:44px;font-weight:900;font-style:italic;user-select:none;-webkit-user-select:none;touch-action:none;box-shadow:0 0 0 10px #ffffff14,0 14px 40px #0009;position:relative;overflow:hidden}
+#pad small{font-size:15px;font-style:normal;font-weight:700;opacity:.9;margin-top:6px;padding:0 20px}
+#pad i{position:absolute;left:0;right:0;bottom:0;height:0;background:#ffffff40;pointer-events:none}
+#pad.hit{transform:scale(.96)}
+#ptimer{font-size:34px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--acc)}
+.pop{display:grid;gap:12px;width:100%}
+.pop button{text-align:left;background:var(--panel);border:2px solid var(--line)}
+.pop button.sel{background:var(--c);border-color:#fff}
+.pop button.ok{background:#14532d;border-color:var(--ok)}
+.pop button.no{background:#7f1d1d;border-color:var(--bad)}
+.tpick{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.tpick button{width:auto;font-size:14px;padding:.5em .9em;background:var(--c)}
+#pstat{padding:10px 16px;font-size:13px;color:var(--mut);text-align:center;border-top:1px solid var(--line)}
+</style>
+</head>
+<body>
+
+<div id="menu" class="screen hide">
+  <div class="tag">Team Game</div>
+  <h1>Trail Summit<br>Challenge</h1>
+  <p>Balapan trail menuju puncak gunung. Layar ini untuk host (laptop / proyektor). Pemain bergabung dari HP dengan scan QR.</p>
+  <div class="row">
+    <button onclick="go('host')">Mulai sebagai Host</button>
+    <button class="ghost" onclick="go('admin')">Admin &amp; Challenge</button>
+  </div>
+</div>
+
+<div id="host" class="screen hide">
+  <canvas id="cv"></canvas>
+  <div id="warn" class="hide"></div>
+  <div id="hud"><div class="ttl" id="hTitle"></div><div class="rnd" id="hRound"></div><div class="tim" id="hTime"></div></div>
+  <div id="roomtag" class="hide"></div>
+  <div id="center"></div>
+  <div id="lobby"></div>
+  <div id="board"></div>
+  <div id="ctrl">
+    <button id="bMain"></button>
+    <button class="ghost" id="bSkip">Lewati</button>
+    <span class="info" id="hInfo"></span>
+    <span class="sp"></span>
+    <button class="ghost" id="bBot">+ Bot</button>
+    <button class="ghost" id="bFull">Layar penuh</button>
+    <button class="ghost" id="bReset">Reset</button>
+    <button class="ghost" onclick="go('admin')">Admin</button>
+  </div>
+</div>
+
+<div id="admin" class="screen hide"></div>
+
+<div id="phone" class="screen hide">
+  <div id="phead"><span id="pname">Trail Summit</span><small id="pteam"></small></div>
+  <div id="pbody"></div>
+  <div id="pstat">Menghubungkan…</div>
+</div>
+
+<script>
+'use strict';
+/* ===================== UTIL & CONFIG ===================== */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
+const QS=new URLSearchParams(location.search);
+const LOCAL=QS.has('local')||typeof Peer==='undefined';
+const PREFIX='trailsummit-';
+const TYPES={tap:'Tap cepat',shout:'Teriak (mic)',shake:'Goyang HP',quiz:'Kuis'};
+const COLORS=['#1e5bff','#ef4444','#22c55e','#f59e0b','#a855f7','#06b6d4','#ec4899','#84cc16','#f97316','#e2e8f0'];
+const TNAMES=['Biru','Merah','Hijau','Kuning','Ungu','Tosca','Pink','Lime','Oranye','Putih'];
+const DEFAULT_CFG={
+  title:'Trail Summit Challenge',teamCount:4,pick:true,trackPct:55,micSens:1,shakeSens:1,tapMax:8,
+  teams:TNAMES.map((n,i)=>({name:'Tim '+n,color:COLORS[i]})),
+  rounds:[
+    {type:'tap',title:'Start! Geber Gas',desc:'Tap tombol GAS secepat mungkin',dur:20,pts:20,qCount:3,qTime:15},
+    {type:'shout',title:'Tanjakan Yel-Yel',desc:'Teriakkan yel-yel tim sekeras mungkin!',dur:20,pts:25,qCount:3,qTime:15},
+    {type:'quiz',title:'Pos Kuis',desc:'Jawab dengan benar dan cepat',dur:20,pts:25,qCount:3,qTime:15},
+    {type:'shake',title:'Jalur Berbatu',desc:'Goyangkan HP sekuat tenaga!',dur:20,pts:30,qCount:3,qTime:15}
+  ],
+  quiz:[
+    {q:'Perlengkapan yang paling wajib dipakai saat berkendara motor?',opts:['Helm','Jaket','Sarung tangan','Kacamata'],a:0},
+    {q:'Gunung tertinggi di Pulau Jawa adalah…',opts:['Merapi','Semeru','Slamet','Lawu'],a:1},
+    {q:'Kunci utama kerja tim yang baik adalah…',opts:['Bekerja sendiri','Saling menyalahkan','Komunikasi','Diam saja'],a:2},
+    {q:'Sebelum menanjak, yang perlu dicek pertama kali?',opts:['Warna motor','Stiker','Klakson','Rem dan ban'],a:3},
+    {q:'Gunung tertinggi di Indonesia adalah…',opts:['Puncak Jaya','Kerinci','Rinjani','Semeru'],a:0},
+    {q:'K3 adalah singkatan dari…',opts:['Kerja Keras Kompak','Keselamatan dan Kesehatan Kerja','Kualitas Kerja Karyawan','Kendali Kualitas Kerja'],a:1}
+  ]
+};
+function loadCfg(){
+  let c={};try{c=JSON.parse(localStorage.getItem('trail_cfg')||'{}')}catch(e){}
+  return normCfg(c);
+}
+function normCfg(c){
+  const d=JSON.parse(JSON.stringify(DEFAULT_CFG));
+  const o=Object.assign(d,c||{});
+  if(!Array.isArray(o.teams))o.teams=d.teams;
+  while(o.teams.length<10)o.teams.push({name:'Tim '+TNAMES[o.teams.length],color:COLORS[o.teams.length]});
+  o.teamCount=clamp(parseInt(o.teamCount)||4,1,10);
+  if(!Array.isArray(o.rounds)||!o.rounds.length)o.rounds=JSON.parse(JSON.stringify(DEFAULT_CFG.rounds));
+  if(!Array.isArray(o.quiz))o.quiz=[];
+  return o;
+}
+function saveCfg(c){try{localStorage.setItem('trail_cfg',JSON.stringify(c))}catch(e){}}
+function show(id){['menu','host','admin','phone'].forEach(s=>$(s).classList.toggle('hide',s!==id))}
+function go(v){location.hash=v;route()}
+let hostStarted=false;
+function route(){
+  if(QS.get('j')){show('phone');Phone.init(QS.get('j').toUpperCase());return}
+  const h=location.hash.slice(1);
+  if(h==='host'){show('host');if(!hostStarted){hostStarted=true;Host.init()}else Host.reloadCfg()}
+  else if(h==='admin'){show('admin');Admin.render()}
+  else show('menu');
+}
+window.addEventListener('hashchange',route);
+
+/* ===================== NETWORK ===================== */
+// Host side: onMsg(pid,msg), send(pid,msg), broadcast(msg)
+function HostNet(room,onMsg,onStatus){
+  const conns={};let bc=null,peer=null;
+  if(LOCAL){
+    bc=new BroadcastChannel(PREFIX+room);
+    bc.onmessage=e=>{const d=e.data;if(d&&d.from)onMsg(d.from,d.msg)};
+    onStatus('ok');
+  }else{
+    const mk=()=>{
+      peer=new Peer(PREFIX+room);
+      peer.on('open',()=>onStatus('ok'));
+      peer.on('connection',c=>{
+        c.on('data',d=>{if(d&&d.pid){conns[d.pid]=c;onMsg(d.pid,d)}});
+      });
+      peer.on('disconnected',()=>{onStatus('putus, menyambung ulang…');try{peer.reconnect()}catch(e){}});
+      peer.on('error',e=>{
+        if(e.type==='unavailable-id')onStatus('ID room terpakai');
+        else if(e.type!=='peer-unavailable')onStatus('error: '+e.type);
+      });
+    };mk();
+  }
+  return{
+    send(pid,msg){
+      if(bc)bc.postMessage({to:pid,msg});
+      else{const c=conns[pid];if(c&&c.open)try{c.send(msg)}catch(e){}}
+    },
+    broadcast(msg){
+      if(bc)bc.postMessage({to:'*',msg});
+      else for(const k in conns){const c=conns[k];if(c.open)try{c.send(msg)}catch(e){}}
+    }
+  };
+}
+// Phone side
+function PhoneNet(room,pid,onMsg,onStatus){
+  let bc=null,peer=null,conn=null,retry=null;
+  if(LOCAL){
+    bc=new BroadcastChannel(PREFIX+room);
+    bc.onmessage=e=>{const d=e.data;if(d&&(d.to===pid||d.to==='*'))onMsg(d.msg)};
+    setTimeout(()=>onStatus(true),50);
+  }else{
+    const connect=()=>{
+      if(!peer||peer.destroyed)return;
+      conn=peer.connect(PREFIX+room,{reliable:true});
+      conn.on('open',()=>onStatus(true));
+      conn.on('data',onMsg);
+      conn.on('close',()=>{onStatus(false);sched()});
+      conn.on('error',()=>{onStatus(false);sched()});
+    };
+    const sched=()=>{clearTimeout(retry);retry=setTimeout(()=>{if(!conn||!conn.open)connect()},2000)};
+    const mk=()=>{
+      peer=new Peer();
+      peer.on('open',connect);
+      peer.on('disconnected',()=>{onStatus(false);try{peer.reconnect()}catch(e){}});
+      peer.on('error',e=>{onStatus(false,e.type);if(e.type==='peer-unavailable')sched();else if(e.type==='network'||e.type==='server-error'){try{peer.destroy()}catch(x){}setTimeout(mk,2500)}});
+    };mk();
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden&&(!conn||!conn.open))sched()});
+  }
+  return{send(msg){msg.pid=pid;if(bc)bc.postMessage({from:pid,msg});else if(conn&&conn.open)try{conn.send(msg)}catch(e){}}};
+}
+
+/* ===================== HOST ===================== */
+const Host=(()=>{
+  let cfg,net,room,cv,cx,W=0,H=0,DPR=1;
+  const P={};            // players: pid -> {name,team,v,last,ans,ansLeft,bot}
+  let T=[];              // teams runtime
+  const G={phase:'lobby',ri:-1,timer:0,q:null,qi:0,qPtr:0,finish:0,trackLen:1,time:0,parts:[]};
+
+  function init(){
+    cfg=loadCfg();
+    room=sessionStorage.getItem('trail_room');
+    if(!room){room=Array.from({length:4},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ'[Math.random()*24|0]).join('');sessionStorage.setItem('trail_room',room)}
+    cv=$('cv');cx=cv.getContext('2d');
+    addEventListener('resize',resize);resize();
+    net=HostNet(room,onMsg,s=>{const w=$('warn');if(s==='ok'){if(!LOCAL)w.classList.add('hide')}else{w.textContent='Koneksi: '+s;w.classList.remove('hide')}});
+    if(LOCAL){$('warn').textContent='Mode demo lokal — HP hanya bisa bergabung dari browser yang sama. Hosting online untuk bermain sungguhan.';$('warn').classList.remove('hide')}
+    resetTeams();
+    $('bMain').onclick=mainBtn;$('bSkip').onclick=skip;$('bBot').onclick=addBot;
+    $('bReset').onclick=()=>{toLobby()};
+    $('bFull').onclick=()=>{try{document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()}catch(e){}};
+    addEventListener('keydown',e=>{if(e.code==='Space'&&!$('host').classList.contains('hide')){e.preventDefault();mainBtn()}});
+    drawLobby();ui();
+    let last=performance.now();
+    (function loop(now){const dt=Math.min(.1,Math.max(0,(now-last)/1000));last=now;update(dt);render(dt);requestAnimationFrame(loop)})(last);
+    setInterval(()=>{const now=performance.now();if(now-last>400){const dt=Math.min(1.5,(now-last)/1000);last=now;update(dt)}},250); // tetap jalan saat tab host di background
+    setInterval(()=>{net.broadcast({t:'st',teams:T.map(t=>({f:+frac(t).toFixed(3),r:t.rank}))})},1000);
+    setInterval(()=>{if(G.phase==='lobby')net.broadcast(pub())},3000);
+  }
+  function reloadCfg(){if(G.phase==='lobby'){cfg=loadCfg();resetTeams();for(const k in P)if(P[k].team>=cfg.teamCount)P[k].team=smallest();drawLobby();ui();net.broadcast(pub());for(const k in P)sendMe(k)}}
+  function resize(){DPR=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR}
+  function resetTeams(){
+    T=cfg.teams.slice(0,cfg.teamCount).map((t,i)=>({i,name:t.name,color:t.color,p:0,disp:0,int:0,wheel:0,fin:0,rank:i+1}));
+    const tot=cfg.rounds.reduce((s,r)=>s+(+r.pts||0),0)||1;
+    G.trackLen=tot*clamp((+cfg.trackPct||70)/100,.2,1);G.finish=0;G.qPtr=0;G.parts=[];
+  }
+  const frac=t=>clamp(t.disp/G.trackLen);
+  const members=i=>Object.values(P).filter(p=>p.team===i);
+  const online=p=>p.bot||performance.now()-p.last<6000;
+  function smallest(){let b=0,bn=1e9;for(let i=0;i<cfg.teamCount;i++){const n=members(i).length;if(n<bn){bn=n;b=i}}return b}
+  function ranking(){
+    const a=T.filter(t=>G.phase==='lobby'||members(t.i).length).slice().sort((x,y)=>(x.fin||99)-(y.fin||99)||y.p-x.p);
+    a.forEach((t,k)=>t.rank=k+1);return a;
+  }
+  function pub(){
+    const r=cfg.rounds[G.ri];
+    return{t:'s',phase:G.phase,ri:G.ri,n:cfg.rounds.length,title:cfg.title,pick:!!cfg.pick,
+      round:r?{type:r.type,title:r.title,desc:r.desc}:null,left:Math.max(0,G.timer*1000|0),
+      q:G.q?{text:G.q.q,opts:G.q.opts,i:G.qi,n:G.qn}:null,ans:G.phase==='reveal'&&G.q?G.q.a:null,
+      sens:{mic:+cfg.micSens||1,shake:+cfg.shakeSens||1,tap:+cfg.tapMax||8},
+      teams:T.map(t=>({name:t.name,color:t.color,r:t.rank,f:+frac(t).toFixed(3)}))};
+  }
+  function sendMe(pid){const p=P[pid];if(p&&!p.bot)net.send(pid,{t:'me',team:p.team,name:p.name})}
+  function setPhase(ph,timer){G.phase=ph;G.timer=timer||0;ranking();net.broadcast(pub());ui()}
+
+  function onMsg(pid,m){
+    let p=P[pid];
+    if(m.t==='join'){
+      if(!p){
+        if(Object.keys(P).length>=50){net.send(pid,{t:'full'});return}
+        p=P[pid]={name:String(m.name||'Pemain').slice(0,16),team:smallest(),v:0,last:performance.now(),ans:null};
+      }else if(m.name)p.name=String(m.name).slice(0,16);
+      p.last=performance.now();
+      sendMe(pid);net.send(pid,pub());
+      if(G.phase==='lobby')drawLobby();
+      return;
+    }
+    if(!p){net.send(pid,{t:'who'});return}
+    p.last=performance.now();
+    if(m.t==='v')p.v=clamp(+m.v||0);
+    else if(m.t==='team'&&G.phase==='lobby'&&cfg.pick){const i=m.team|0;if(i>=0&&i<cfg.teamCount){p.team=i;sendMe(pid);drawLobby()}}
+    else if(m.t==='ans'&&G.phase==='q'&&p.ans==null&&m.q===G.qi){p.ans=m.a|0;p.ansLeft=G.timer/(G.qTime||1)}
+  }
+  let botN=0;
+  function addBot(){
+    if(Object.keys(P).length>=50)return;
+    const id='bot'+(++botN);P[id]={name:'Bot '+botN,team:smallest(),v:0,last:0,ans:null,bot:true,skill:.35+Math.random()*.55};
+    if(G.phase==='lobby')drawLobby();
+  }
+
+  /* ---- flow ---- */
+  function mainBtn(){
+    if(G.phase==='lobby'){if(Object.keys(P).length)start()}
+    else if(G.phase==='result')nextRound();
+    else if(G.phase==='end')toLobby();
+  }
+  function skip(){
+    if(G.phase==='intro')G.timer=0;
+    else if(G.phase==='play'||G.phase==='q'||G.phase==='reveal')G.timer=0;
+  }
+  function toLobby(){cfg=loadCfg();resetTeams();G.ri=-1;G.q=null;for(const k in P){P[k].v=0;if(P[k].team>=cfg.teamCount)P[k].team=smallest()}setPhase('lobby');drawLobby();for(const k in P)sendMe(k)}
+  function start(){resetTeams();G.ri=-1;nextRound()}
+  function nextRound(){
+    G.ri++;G.q=null;
+    if(G.ri>=cfg.rounds.length||T.every(t=>t.fin||!members(t.i).length)){setPhase('end');return}
+    for(const k in P)P[k].v=0;
+    setPhase('intro',5);
+  }
+  function startQ(){
+    const r=cfg.rounds[G.ri];
+    if(!cfg.quiz.length){setPhase('result');return}
+    G.q=cfg.quiz[G.qPtr%cfg.quiz.length];G.qPtr++;G.qTime=+r.qTime||15;
+    for(const k in P){const p=P[k];p.ans=null;p.ansLeft=0;if(p.bot)p.botAt=G.qTime*(.25+Math.random()*.6)}
+    setPhase('q',G.qTime);
+  }
+  function reveal(){
+    const r=cfg.rounds[G.ri],max=(+r.pts||0)/G.qn;
+    T.forEach(t=>{const ms=members(t.i).filter(online);if(!ms.length||t.fin)return;
+      const sc=ms.reduce((s,p)=>s+(p.ans===G.q.a?.5+.5*clamp(p.ansLeft):0),0)/ms.length;
+      t.p+=max*sc;t.gain=sc});
+    checkFinish();setPhase('reveal',5);
+  }
+  function checkFinish(){T.forEach(t=>{if(!t.fin&&t.p>=G.trackLen){t.p=G.trackLen;t.fin=++G.finish}})}
+  function update(dt){
+    G.time+=dt;const r=cfg.rounds[G.ri];
+    const timed=['intro','play','q','reveal'].includes(G.phase);
+    if(timed)G.timer-=dt;
+    if(G.phase==='play'){
+      const now=performance.now();
+      T.forEach(t=>{
+        const ms=members(t.i).filter(online);let s=0;
+        ms.forEach(p=>{
+          if(p.bot){p.v=clamp(p.v+(Math.random()-.5)*.25+(p.skill-p.v)*.08)}
+          else if(now-p.last>1500)p.v=0;
+          s+=p.v});
+        const target=ms.length?s/ms.length:0;
+        t.int+=(target-t.int)*Math.min(1,dt*6);
+        if(!t.fin)t.p+=t.int*(+r.pts||0)/(+r.dur||20)*dt;
+      });
+      checkFinish();
+      if(G.timer<=0||T.every(t=>t.fin||!members(t.i).length)){T.forEach(t=>t.int=0);setPhase('result')}
+    }else{
+      T.forEach(t=>t.int*=Math.pow(.02,dt));
+      if(G.phase==='intro'&&G.timer<=0){
+        if(r.type==='quiz'){G.qi=0;G.qn=Math.max(1,Math.min(+r.qCount||1,cfg.quiz.length||1));startQ()}
+        else setPhase('play',+r.dur||20);
+      }else if(G.phase==='q'){
+        const hum=Object.values(P).filter(online);
+        hum.forEach(p=>{if(p.bot&&p.ans==null&&G.qTime-G.timer>p.botAt){p.ans=Math.random()<p.skill?G.q.a:(Math.random()*4|0);p.ansLeft=G.timer/G.qTime}});
+        if(G.timer<=0||(hum.length&&hum.every(p=>p.ans!=null)))reveal();
+      }else if(G.phase==='reveal'&&G.timer<=0){
+        G.qi++;
+        if(G.qi<G.qn&&!T.every(t=>t.fin||!members(t.i).length))startQ();else{G.q=null;setPhase('result')}
+      }
+    }
+    T.forEach(t=>{const d=t.p-t.disp;const mv=d*Math.min(1,dt*3);t.disp+=mv;t.spd=mv/Math.max(dt,.001);t.wheel+=mv*1.6+t.int*dt*4});
+    ranking();
+    hudTick();
+  }
+
+  /* ---- DOM UI ---- */
+  function ui(){
+    const r=cfg.rounds[G.ri],ph=G.phase;
+    $('lobby').classList.toggle('hide',ph!=='lobby');
+    $('hTitle').textContent=cfg.title;
+    $('hRound').textContent=r&&ph!=='end'?`Ronde ${G.ri+1}/${cfg.rounds.length} · ${r.title}`:'';
+    $('bMain').textContent=ph==='lobby'?'Mulai Game':ph==='result'?(G.ri+1>=cfg.rounds.length?'Lihat Pemenang':'Ronde Berikutnya'):ph==='end'?'Kembali ke Lobby':'Berjalan…';
+    $('bMain').disabled=!['lobby','result','end'].includes(ph);
+    $('bSkip').classList.toggle('hide',!['intro','play','q','reveal'].includes(ph));
+    $('bBot').classList.toggle('hide',ph!=='lobby');
+    const rt=$('roomtag');rt.classList.toggle('hide',ph==='lobby');rt.innerHTML=`Gabung: kode <b>${room}</b>`;
+    const c=$('center');let h='';
+    if(ph==='intro')h=`<div class="card"><div class="tag">${esc(TYPES[r.type])}</div><h2>${esc(r.title)}</h2><p>${esc(r.desc)}</p><div class="big" id="cBig"></div></div>`;
+    else if(ph==='q'||ph==='reveal'){
+      h=`<div class="card"><div class="tag">Pertanyaan ${G.qi+1} / ${G.qn}</div><div class="q">${esc(G.q.q)}</div><div class="opts">`+
+        G.q.opts.map((o,i)=>`<div class="opt ${ph==='reveal'?(i===G.q.a?'ok':'no'):''}"><b>${'ABCD'[i]}</b>${esc(o)}</div>`).join('')+
+        `</div><p id="cAns"></p></div>`;
+    }else if(ph==='result'){
+      h=`<div class="card"><div class="tag">Ronde ${G.ri+1} selesai</div><h2>Klasemen sementara</h2>${podium()}</div>`;
+    }else if(ph==='end'){
+      const a=ranking();h=`<div class="card"><div class="tag">Finish</div><h2>🏆 ${esc(a[0]?a[0].name:'')}</h2>${podium()}</div>`;
+    }
+    c.innerHTML=h;
+    board(true);
+  }
+  function podium(){return'<div class="podium">'+ranking().map((t,k)=>`<div style="--c:${t.color}"><b>${k+1}</b><span>${esc(t.name)}</span><b>${t.fin?'PUNCAK':Math.round(clamp(t.p/G.trackLen)*100)+'%'}</b></div>`).join('')+'</div>'}
+  let boardKey='';
+  function board(force){
+    const a=ranking(),key=a.map(t=>t.i).join()+G.phase;
+    if(force||key!==boardKey){
+      boardKey=key;
+      $('board').innerHTML='<h3>Klasemen</h3>'+a.map(t=>`<div class="brow" style="--c:${t.color}"><div class="rk">${t.rank}</div><div><div class="nm">${esc(t.name)}</div><div class="sub">${members(t.i).length} pemain</div></div><div class="pc" id="pc${t.i}"></div><div class="bar"><i id="bi${t.i}"></i></div></div>`).join('');
+    }
+    a.forEach(t=>{const e=$('pc'+t.i);if(e){e.textContent=t.fin?'🏁':Math.round(frac(t)*100)+'%';$('bi'+t.i).style.width=(t.int*100)+'%'}});
+  }
+  function hudTick(){
+    const ph=G.phase,s=Math.max(0,Math.ceil(G.timer));
+    $('hTime').textContent=(ph==='play'||ph==='q')?s:'';
+    const b=$('cBig');if(b)b.textContent=s;
+    const ca=$('cAns');if(ca&&ph==='q'){const hum=Object.values(P).filter(online);ca.textContent=hum.filter(p=>p.ans!=null).length+' / '+hum.length+' sudah menjawab'}
+    $('hInfo').textContent=Object.keys(P).length+' pemain';
+    board(false);
+  }
+  function drawLobby(){
+    const base=location.origin+location.pathname;
+    const url=base+'?j='+room+(QS.has('local')?'&local=1':'');
+    let teams='';
+    for(let i=0;i<cfg.teamCount;i++){const t=cfg.teams[i],ms=members(i);
+      teams+=`<div class="tcard" style="--c:${t.color}"><b>${esc(t.name)}</b><span class="cnt">${ms.length}</span><div class="chips">${ms.map(p=>`<span class="chip ${online(p)?'':'off'}">${esc(p.name)}</span>`).join('')}</div></div>`}
+    $('lobby').innerHTML=`<div class="join"><div class="tag">Scan untuk bergabung</div><div style="height:1.5vh"></div><div id="qr"></div><div class="code">${room}</div><div class="url">${esc(url)}</div></div><div class="teams">${teams}</div>`;
+    try{if(typeof QRCode!=='undefined')new QRCode($('qr'),{text:url,width:512,height:512,correctLevel:QRCode.CorrectLevel.M});else $('qr').innerHTML='<div style="color:#000;padding:2vh;font-size:1.8vh;max-width:28vh">QR tidak termuat.<br>Buka URL di bawah dari HP.</div>'}catch(e){}
+    T.forEach(t=>{const c=cfg.teams[t.i];t.name=c.name;t.color=c.color});board(true);
+  }
+
+  /* ---- CANVAS ---- */
+  const mw=()=>W*.76;
+  function gx(u){return mw()*.05+u*mw()*.84}
+  function gy(u){const c=clamp(u),env=Math.sin(Math.PI*c);
+    return H*.84-H*.56*Math.pow(c,1.12)+H*.017*env*(Math.sin(c*26)+.6*Math.sin(c*57+1.3))+(u>1?Math.pow((u-1)*10,3)*H*.02:0)}
+  function rnd(seed){let s=seed;return()=>((s=Math.imul(s,1664525)+1013904223|0)>>>0)/4294967296}
+  function render(dt){
+    cx.setTransform(DPR,0,0,DPR,0,0);
+    const sky=cx.createLinearGradient(0,0,0,H);sky.addColorStop(0,'#0c2a6b');sky.addColorStop(.55,'#4f8fe0');sky.addColorStop(1,'#f3c98b');
+    cx.fillStyle=sky;cx.fillRect(0,0,W,H);
+    // sun
+    cx.fillStyle='#ffe9a8';cx.beginPath();cx.arc(W*.16,H*.3,H*.06,0,7);cx.fill();
+    cx.fillStyle='#ffe9a822';cx.beginPath();cx.arc(W*.16,H*.3,H*.1,0,7);cx.fill();
+    // clouds
+    cx.fillStyle='#ffffffcc';
+    for(let i=0;i<5;i++){const x=((i*W*.27+G.time*(6+i*2))%(W*1.2))-W*.1,y=H*(.1+.07*((i*37)%5)),s=H*(.025+.008*(i%3));
+      cx.beginPath();cx.arc(x,y,s,0,7);cx.arc(x+s*1.2,y-s*.5,s*1.3,0,7);cx.arc(x+s*2.6,y,s*1.1,0,7);cx.fill()}
+    // far ridges
+    [['#3b63a8',.62,.11,3],['#2c4a80',.72,.09,7]].forEach(([col,by,amp,sd])=>{
+      const r=rnd(sd);cx.fillStyle=col;cx.beginPath();cx.moveTo(0,H);
+      for(let x=0;x<=W+60;x+=60)cx.lineTo(x,H*by-H*amp*(.4+r())*Math.abs(Math.sin(x/W*5+sd)));
+      cx.lineTo(W,H);cx.fill()});
+    // mountain
+    const g=cx.createLinearGradient(0,gy(1),0,H);
+    g.addColorStop(0,'#f1f5f9');g.addColorStop(.1,'#cbd5e1');g.addColorStop(.22,'#7c8798');g.addColorStop(.5,'#3f6b45');g.addColorStop(1,'#1c3a27');
+    cx.fillStyle=g;cx.beginPath();cx.moveTo(0,H);cx.lineTo(0,gy(0));
+    for(let u=-.06;u<=1.2;u+=.004)cx.lineTo(gx(u),gy(u));
+    cx.lineTo(W,H);cx.fill();
+    // trees on lower slope (behind track)
+    const tr=rnd(11);
+    for(let i=0;i<46;i++){const u=tr()*.62,d=H*(.05+tr()*.3),x=gx(u),y=gy(u)+d,s=H*(.018+tr()*.016);
+      if(y>H)continue;cx.fillStyle=i%2?'#1f4a2c':'#285a36';cx.beginPath();cx.moveTo(x,y-s*2.4);cx.lineTo(x-s,y);cx.lineTo(x+s,y);cx.fill()}
+    // rocks upper
+    for(let i=0;i<24;i++){const u=.6+tr()*.4,d=H*(.04+tr()*.2),x=gx(u),y=gy(u)+d,s=H*(.006+tr()*.012);
+      cx.fillStyle='#5b6676';cx.beginPath();cx.ellipse(x,y,s*1.5,s,0,0,7);cx.fill()}
+    // track
+    cx.lineJoin='round';cx.lineCap='round';
+    cx.strokeStyle='#6b4423';cx.lineWidth=H*.016;cx.beginPath();
+    for(let u=-.06;u<=1.07;u+=.004)cx.lineTo(gx(u),gy(u)+H*.006);cx.stroke();
+    cx.strokeStyle='#a3744a';cx.lineWidth=H*.004;cx.setLineDash([H*.02,H*.02]);cx.beginPath();
+    for(let u=-.06;u<=1.07;u+=.004)cx.lineTo(gx(u),gy(u)+H*.006);cx.stroke();cx.setLineDash([]);
+    // posts
+    let acc=0;
+    cfg.rounds.forEach((r,i)=>{acc+=+r.pts||0;const u=acc/G.trackLen;if(u<.97)flag(gx(u),gy(u),'POS '+(i+1),'#ffd23f',H*.05)});
+    flag(gx(0),gy(0),'START','#fff',H*.05);
+    flag(gx(1.03),gy(1.03),'PUNCAK','#ef4444',H*.1);
+    // particles
+    G.parts=G.parts.filter(p=>(p.l-=dt)>0);
+    G.parts.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;cx.fillStyle=`rgba(190,160,120,${p.l})`;cx.beginPath();cx.arc(p.x,p.y,p.s*(1.6-p.l),0,7);cx.fill()});
+    // bikes (leader drawn last)
+    const sc=H/620*clamp(1.25-T.length*.03,.9,1.2);
+    const act=T.filter(t=>G.phase==='lobby'||members(t.i).length).slice().sort((a,b)=>a.p-b.p);
+    act.forEach(t=>{
+      const u=frac(t)*1.0,x=gx(u),y=gy(u),a=Math.atan2(gy(u+.01)-gy(u-.01),gx(u+.01)-gx(u-.01));
+      const bob=Math.sin(G.time*18+t.i)*t.int*1.5;
+      if(t.spd>.3||t.int>.15)if(Math.random()<.5)G.parts.push({x:x-30*sc*Math.cos(a),y:y-4,vx:-40-Math.random()*40,vy:-10-Math.random()*30,l:.8,s:3*sc+Math.random()*3});
+      cx.save();cx.translate(x,y+bob+(t.i-(T.length-1)/2)*3*sc);cx.rotate(a-(t.int>.6?.12*(t.int-.6)/.4:0));cx.scale(sc,sc);bike(t);cx.restore();
+      // label
+      const ly=y-108*sc-(t.i%3)*H*.028;
+      cx.font=`800 ${H*.02}px sans-serif`;const tw=cx.measureText(t.name).width+H*.02;
+      cx.strokeStyle=t.color;cx.lineWidth=2;cx.beginPath();cx.moveTo(x,ly+H*.014);cx.lineTo(x,y-88*sc);cx.stroke();
+      cx.fillStyle=t.color;rr(x-tw/2,ly-H*.016,tw,H*.03,H*.015);cx.fill();
+      cx.fillStyle=lum(t.color)>.6?'#0b1220':'#fff';cx.textAlign='center';cx.textBaseline='middle';cx.fillText(t.name,x,ly);
+    });
+  }
+  function lum(h){const n=parseInt(h.slice(1),16);return(.299*(n>>16&255)+.587*(n>>8&255)+.114*(n&255))/255}
+  function rr(x,y,w,h,r){cx.beginPath();cx.moveTo(x+r,y);cx.arcTo(x+w,y,x+w,y+h,r);cx.arcTo(x+w,y+h,x,y+h,r);cx.arcTo(x,y+h,x,y,r);cx.arcTo(x,y,x+w,y,r);cx.closePath()}
+  function flag(x,y,txt,col,h){
+    cx.strokeStyle='#e5e7eb';cx.lineWidth=3;cx.beginPath();cx.moveTo(x,y);cx.lineTo(x,y-h);cx.stroke();
+    const w=h*.9,fh=h*.42,wv=Math.sin(G.time*4+x)*fh*.12;
+    cx.fillStyle=col;cx.beginPath();cx.moveTo(x,y-h);cx.lineTo(x+w,y-h+fh/2+wv);cx.lineTo(x,y-h+fh);cx.fill();
+    cx.fillStyle='#0b1220cc';cx.font=`800 ${Math.max(10,H*.016)}px sans-serif`;cx.textAlign='center';cx.textBaseline='top';
+    cx.fillStyle='#fff';cx.strokeStyle='#0b1220';cx.lineWidth=3;cx.strokeText(txt,x,y+H*.022);cx.fillText(txt,x,y+H*.022);
+  }
+  function wheel(x,y,r,a){
+    cx.strokeStyle='#111827';cx.lineWidth=6;cx.setLineDash([4,2.2]);cx.beginPath();cx.arc(x,y,r,a,a+6.283);cx.stroke();cx.setLineDash([]);
+    cx.strokeStyle='#9ca3af';cx.lineWidth=1.6;cx.beginPath();cx.arc(x,y,r-4,0,7);cx.stroke();
+    cx.lineWidth=1;cx.beginPath();for(let i=0;i<6;i++){const b=a+i*1.047;cx.moveTo(x,y);cx.lineTo(x+Math.cos(b)*(r-4),y+Math.sin(b)*(r-4))}cx.stroke();
+    cx.fillStyle='#374151';cx.beginPath();cx.arc(x,y,3,0,7);cx.fill();
+  }
+  function line(pts,w,col){cx.strokeStyle=col;cx.lineWidth=w;cx.beginPath();pts.forEach((p,i)=>i?cx.lineTo(p[0],p[1]):cx.moveTo(p[0],p[1]));cx.stroke()}
+  function poly(pts,col){cx.fillStyle=col;cx.beginPath();pts.forEach((p,i)=>i?cx.lineTo(p[0],p[1]):cx.moveTo(p[0],p[1]));cx.closePath();cx.fill()}
+  function bike(t){
+    const c=t.color,w=t.wheel;
+    cx.lineCap='round';cx.lineJoin='round';
+    wheel(-30,-15,15,w);wheel(32,-15,15,w);
+    line([[-30,-15],[-4,-24]],4,'#9ca3af');                 // swingarm
+    line([[32,-15],[21,-50]],4,'#d1d5db');                  // fork
+    line([[-6,-32],[-34,-40]],4,'#6b7280');                 // exhaust
+    poly([[-10,-34],[12,-36],[14,-20],[-6,-18]],'#1f2937'); // engine
+    line([[-4,-24],[6,-44],[20,-46]],3,'#111827');          // frame
+    poly([[-4,-46],[20,-50],[18,-34],[2,-32]],c);           // tank/shroud
+    line([[-28,-45],[-4,-46]],6,'#111827');                 // seat
+    line([[-26,-46],[-42,-52]],4,c);                        // rear fender
+    poly([[-24,-44],[-10,-44],[-12,-34],[-22,-36]],'#f8fafc');// side plate
+    line([[16,-40],[40,-34]],4,c);                          // front fender
+    line([[21,-50],[16,-57]],3,'#111827');                  // bar
+    poly([[20,-58],[27,-56],[26,-47],[20,-48]],'#f8fafc');  // number plate
+    // rider
+    line([[-10,-52],[4,-40],[-1,-24]],6,'#1f2937');         // leg
+    line([[-1,-24],[6,-23]],5,'#111827');                   // boot
+    line([[-10,-52],[3,-72]],9,'#f8fafc');                  // torso
+    line([[-9,-56],[1,-70]],3,c);                           // jersey stripe
+    line([[3,-70],[10,-60],[17,-57]],5,'#f8fafc');          // arm
+    cx.fillStyle=c;cx.beginPath();cx.arc(8,-80,8,0,7);cx.fill(); // helmet
+    poly([[10,-83],[17,-80],[15,-75],[10,-76]],'#0b1220');  // visor
+    line([[12,-74],[18,-73]],3,c);                          // chin guard
+  }
+  return{init,reloadCfg};
+})();
+
+/* ===================== ADMIN ===================== */
+const Admin=(()=>{
+  let c;
+  function render(){
+    if(!c)c=loadCfg();
+    const A=$('admin');
+    let h=`<div class="bar-top"><button onclick="Admin.save()">Simpan</button><button class="ghost" onclick="go('host')">Buka Host</button>
+      <button class="ghost" onclick="Admin.exp()">Export JSON</button><button class="ghost" onclick="$('imp').click()">Import JSON</button>
+      <button class="ghost danger" onclick="Admin.reset()">Reset default</button><span id="saved"></span>
+      <input type="file" id="imp" accept=".json,application/json" class="hide" onchange="Admin.imp(this)"></div>
+      <h1>Admin · Trail Summit Challenge</h1><p style="color:var(--mut);margin:0">Pengaturan tersimpan di browser laptop ini. Buka Host dari browser yang sama. Perubahan berlaku saat game di lobby.</p>`;
+    h+=`<section><h2>Umum</h2><div class="grid">
+      ${f('Judul acara','title','text')}
+      ${f('Jumlah tim (1–10)','teamCount','number','min=1 max=10')}
+      ${f('Panjang lintasan (% dari total poin)','trackPct','number','min=20 max=100')}
+      ${f('Sensitivitas mic (0.5–2)','micSens','number','step=0.1 min=0.3 max=3')}
+      ${f('Sensitivitas goyang (0.5–2)','shakeSens','number','step=0.1 min=0.3 max=3')}
+      ${f('Tap/detik untuk gas penuh','tapMax','number','min=3 max=15')}
+      <div><label>Pemain boleh pilih tim</label><select data-k="pick" data-b="1"><option value="1" ${c.pick?'selected':''}>Ya</option><option value="0" ${c.pick?'':'selected'}>Tidak (otomatis)</option></select></div>
+    </div></section>`;
+    h+=`<section><h2>Tim</h2><div class="grid">`+c.teams.slice(0,c.teamCount).map((t,i)=>
+      `<div><label>Tim ${i+1}</label><div style="display:grid;grid-template-columns:1fr 54px;gap:6px"><input data-k="teams.${i}.name" value="${esc(t.name)}" maxlength="18"><input type="color" data-k="teams.${i}.color" value="${esc(t.color)}"></div></div>`).join('')+`</div></section>`;
+    h+=`<section><h2>Ronde / Challenge</h2>`+c.rounds.map((r,i)=>`<div class="item"><div class="head"><b>Ronde ${i+1}</b>
+      <button class="mini ghost" onclick="Admin.mv(${i},-1)">↑</button><button class="mini ghost" onclick="Admin.mv(${i},1)">↓</button><button class="mini danger" onclick="Admin.del('rounds',${i})">Hapus</button></div>
+      <div class="grid"><div><label>Jenis</label><select data-k="rounds.${i}.type" data-re="1">${Object.entries(TYPES).map(([k,v])=>`<option value="${k}" ${r.type===k?'selected':''}>${v}</option>`).join('')}</select></div>
+      ${f('Judul',`rounds.${i}.title`,'text')}${f('Poin maksimal',`rounds.${i}.pts`,'number','min=1')}
+      ${r.type==='quiz'?f('Jumlah soal',`rounds.${i}.qCount`,'number','min=1')+f('Waktu per soal (dtk)',`rounds.${i}.qTime`,'number','min=5'):f('Durasi (detik)',`rounds.${i}.dur`,'number','min=5')}
+      </div><div style="margin-top:10px">${f('Instruksi untuk pemain',`rounds.${i}.desc`,'text')}</div></div>`).join('')+
+      `<button class="ghost" onclick="Admin.addR()">+ Tambah ronde</button></section>`;
+    h+=`<section><h2>Bank soal kuis</h2><p style="color:var(--mut);margin:0 0 12px;font-size:13px">Soal dipakai berurutan oleh ronde kuis. Pilih bulatan di kiri untuk jawaban benar.</p>`+c.quiz.map((q,i)=>`<div class="item"><div class="head"><b>Soal ${i+1}</b><button class="mini danger" onclick="Admin.del('quiz',${i})">Hapus</button></div>
+      <input data-k="quiz.${i}.q" value="${esc(q.q)}">`+q.opts.map((o,j)=>`<div class="optrow"><input type="radio" name="qa${i}" ${q.a===j?'checked':''} onchange="Admin.setA(${i},${j})"><input data-k="quiz.${i}.opts.${j}" value="${esc(o)}"></div>`).join('')+`</div>`).join('')+
+      `<button class="ghost" onclick="Admin.addQ()">+ Tambah soal</button></section>`;
+    A.innerHTML=h;
+    A.querySelectorAll('[data-k]').forEach(el=>el.addEventListener('change',()=>{
+      let v=el.value;if(el.type==='number')v=+v;if(el.dataset.b)v=v==='1';
+      set(el.dataset.k,v);
+      if(el.dataset.k==='teamCount'||el.dataset.re){c=normCfg(c);render()}
+    }));
+  }
+  function f(label,k,type,extra=''){return`<div><label>${label}</label><input type="${type}" data-k="${k}" value="${esc(get(k))}" ${extra}></div>`}
+  function get(k){return k.split('.').reduce((o,p)=>o?.[p],c)}
+  function set(k,v){const ps=k.split('.'),l=ps.pop();ps.reduce((o,p)=>o[p],c)[l]=v}
+  function note(t){const s=$('saved');if(s){s.textContent=t;setTimeout(()=>{if($('saved'))$('saved').textContent=''},2500)}}
+  return{render,
+    save(){c=normCfg(c);saveCfg(c);note('Tersimpan ✓')},
+    reset(){c=normCfg({});render();note('Default dimuat — klik Simpan')},
+    mv(i,d){const j=i+d;if(j<0||j>=c.rounds.length)return;[c.rounds[i],c.rounds[j]]=[c.rounds[j],c.rounds[i]];render()},
+    del(k,i){c[k].splice(i,1);if(k==='rounds'&&!c.rounds.length)c=normCfg(c);render()},
+    addR(){c.rounds.push({type:'tap',title:'Ronde baru',desc:'Tap tombol GAS secepat mungkin',dur:20,pts:20,qCount:3,qTime:15});render()},
+    addQ(){c.quiz.push({q:'Pertanyaan baru?',opts:['Jawaban A','Jawaban B','Jawaban C','Jawaban D'],a:0});render()},
+    setA(i,j){c.quiz[i].a=j},
+    exp(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(c,null,2)],{type:'application/json'}));a.download='trail-summit-config.json';a.click()},
+    imp(inp){const fl=inp.files[0];if(!fl)return;fl.text().then(t=>{try{c=normCfg(JSON.parse(t));render();note('Diimpor — klik Simpan')}catch(e){note('File tidak valid')}})}
+  };
+})();
+
+/* ===================== PHONE ===================== */
+const Phone=(()=>{
+  let net,room,pid,name='',me=null,S=null,connected=false,endAt=0,inited=false;
+  let micOK=false,motionOK=false,sensorsAsked=false,an=null,buf=null,micV=0,shakeV=0,taps=[],v=0,myAns=null,ansQ=-1,lastKey='';
+  function init(r){
+    if(inited)return;inited=true;room=r;
+    try{pid=localStorage.getItem('trail_pid');name=localStorage.getItem('trail_name')||''}catch(e){}
+    if(!pid){pid='p'+Math.random().toString(36).slice(2,10);try{localStorage.setItem('trail_pid',pid)}catch(e){}}
+    if(QS.get('pid'))pid=QS.get('pid');
+    net=PhoneNet(room,pid,onMsg,(ok,err)=>{connected=ok;stat(ok?'Terhubung · Room '+room:(err==='peer-unavailable'?'Host belum aktif. Mencoba lagi…':'Menghubungkan…'));if(ok&&me)net.send({t:'join',name})});
+    draw();
+    setInterval(tick,250);
+    (function raf(){meter();requestAnimationFrame(raf)})();
+  }
+  const stat=t=>$('pstat').textContent=t;
+  function onMsg(m){
+    if(m.t==='me'){me=m;stat('Terhubung · Room '+room);draw()}
+    else if(m.t==='s'){S=m;endAt=performance.now()+m.left;if(m.phase==='q'&&m.q&&m.q.i!==ansQ){myAns=null;ansQ=m.q.i}if(m.phase==='intro'||m.phase==='lobby'){ansQ=-1;myAns=null}draw()}
+    else if(m.t==='st'&&S){m.teams.forEach((t,i)=>{if(S.teams[i]){S.teams[i].f=t.f;S.teams[i].r=t.r}});head()}
+    else if(m.t==='who'){if(name)net.send({t:'join',name})}
+    else if(m.t==='full'){$('pbody').innerHTML='<h2>Room penuh</h2><p>Maksimal 50 pemain.</p>'}
+  }
+  function mode(){
+    if(!S||S.phase!=='play'||!S.round)return null;
+    const t=S.round.type;
+    if(t==='shout'&&!micOK)return'tap';
+    if(t==='shake'&&!motionOK)return'tap';
+    return t;
+  }
+  function tick(){
+    const md=mode();
+    if(md){
+      const now=performance.now();
+      if(md==='tap'){taps=taps.filter(x=>now-x<1000);v=clamp(taps.length/(S.sens.tap||8))}
+      else if(md==='shout')v=micV;
+      else if(md==='shake')v=shakeV;
+      net.send({t:'v',v:+v.toFixed(2)});
+    }else v=0;
+    const pt=$('ptimer');if(pt)pt.textContent=Math.max(0,Math.ceil((endAt-performance.now())/1000));
+  }
+  function meter(){
+    if(an){an.getFloatTimeDomainData(buf);let s=0;for(let i=0;i<buf.length;i++)s+=buf[i]*buf[i];
+      const db=20*Math.log10(Math.sqrt(s/buf.length)+1e-7);
+      const t=clamp((db+42)/34*((S&&S.sens.mic)||1));micV+=(t-micV)*(t>micV?.5:.12)}
+    shakeV*=.94;
+    const md=mode(),f=$('padfill');
+    if(f){const now=performance.now();const live=md==='tap'?clamp(taps.filter(x=>now-x<1000).length/((S&&S.sens.tap)||8)):md==='shout'?micV:shakeV;f.style.height=(live*100)+'%'}
+  }
+  async function sensors(){
+    sensorsAsked=true;
+    try{navigator.wakeLock&&navigator.wakeLock.request('screen').catch(()=>{})}catch(e){}
+    try{
+      if(typeof DeviceMotionEvent!=='undefined'){
+        if(typeof DeviceMotionEvent.requestPermission==='function'){const r=await DeviceMotionEvent.requestPermission();if(r!=='granted')throw 0}
+        addEventListener('devicemotion',e=>{
+          let a=e.acceleration;let m=0;
+          if(a&&a.x!=null)m=Math.hypot(a.x,a.y,a.z);
+          else{a=e.accelerationIncludingGravity;if(!a||a.x==null)return;m=Math.abs(Math.hypot(a.x,a.y,a.z)-9.81)}
+          motionOK=true;
+          const t=clamp(m/(22/((S&&S.sens.shake)||1)));if(t>shakeV)shakeV+=(t-shakeV)*.5;
+        });
+      }
+    }catch(e){}
+    try{
+      const st=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+      const ac=new(window.AudioContext||window.webkitAudioContext)();await ac.resume();
+      const src=ac.createMediaStreamSource(st);an=ac.createAnalyser();an.fftSize=1024;buf=new Float32Array(an.fftSize);src.connect(an);micOK=true;
+    }catch(e){micOK=false}
+    lastKey='';draw();
+  }
+  function head(){
+    const t=me&&S&&S.teams[me.team];
+    $('pname').textContent=name||'Trail Summit';
+    if(t){$('phone').style.setProperty('--c',t.color);$('pteam').textContent=t.name+(S.phase!=='lobby'?` · #${t.r} · ${Math.round(t.f*100)}%`:'')}
+  }
+  function draw(){
+    head();
+    const B=$('pbody');
+    if(!me){
+      if(lastKey==='join')return;lastKey='join';
+      B.innerHTML=`<div class="tag">Room ${esc(room)}</div><h2>Trail Summit Challenge</h2><p>Masukkan nama kamu</p><input id="nm" maxlength="16" placeholder="Nama" value="${esc(name)}"><button id="jb">Gabung</button>`;
+      $('jb').onclick=()=>{name=$('nm').value.trim()||'Pemain';try{localStorage.setItem('trail_name',name)}catch(e){}net.send({t:'join',name});stat(connected?'Bergabung…':'Menunggu koneksi ke host…')};
+      return;
+    }
+    if(!S)return;
+    const t=S.teams[me.team]||S.teams[0],ph=S.phase,md=mode();
+    const key=[ph,S.ri,S.q&&S.q.i,md,me.team,myAns,sensorsAsked,micOK,motionOK,ph==='lobby'?S.teams.map(x=>x.name+x.color).join():''].join('|');
+    if(key===lastKey)return;lastKey=key;
+    let h='';
+    if(ph==='lobby'){
+      h=`<div class="tag">Kamu masuk</div><h2>${esc(t.name)}</h2>`;
+      if(!sensorsAsked)h+=`<p>Aktifkan mic dan sensor gerak supaya bisa ikut semua tantangan.</p><button id="sb">Aktifkan Mic &amp; Sensor</button>`;
+      else h+=`<p>Mic: ${micOK?'✅ aktif':'❌ tidak tersedia (diganti tap)'}<br>Sensor gerak: ${motionOK?'✅ aktif':'⏳ goyangkan HP untuk tes / diganti tap'}</p>`;
+      if(S.pick&&S.teams.length>1)h+=`<p style="font-size:14px">Ganti tim:</p><div class="tpick">`+S.teams.map((x,i)=>`<button data-t="${i}" style="--c:${x.color};${i===me.team?'outline:3px solid #fff':''}">${esc(x.name)}</button>`).join('')+`</div>`;
+      h+=`<p>Menunggu host memulai…</p>`;
+    }else if(ph==='intro'){
+      h=`<div class="tag">Ronde ${S.ri+1} / ${S.n}</div><h2>${esc(S.round.title)}</h2><p>${esc(S.round.desc)}</p><div class="big" id="ptimer"></div>`;
+      if(!sensorsAsked&&S.round.type!=='tap'&&S.round.type!=='quiz')h+=`<button id="sb">Aktifkan Mic &amp; Sensor</button>`;
+    }else if(ph==='play'){
+      const lab=md==='tap'?['GAS!','Tap secepat mungkin']:md==='shout'?['TERIAK!','Makin keras makin kencang']:['GOYANG!','Goyangkan HP sekuat tenaga'];
+      const fb=md==='tap'&&S.round.type!=='tap'?'<p style="font-size:13px">Sensor tidak tersedia — pakai tap.</p>':'';
+      h=`<div id="ptimer"></div><div id="pad"><i id="padfill"></i>${lab[0]}<small>${lab[1]}</small></div>${fb}`;
+    }else if(ph==='q'||ph==='reveal'){
+      h=`<div class="tag">Soal ${S.q.i+1} / ${S.q.n}</div><p style="font-size:20px;font-weight:800;color:#fff">${esc(S.q.text)}</p><div class="pop">`+
+        S.q.opts.map((o,i)=>{let c='';if(ph==='reveal'){c=i===S.ans?'ok':(i===myAns?'no':'')}else if(i===myAns)c='sel';
+          return`<button data-a="${i}" class="${c}" ${myAns!=null||ph==='reveal'?'disabled':''} style="opacity:1"><b>${'ABCD'[i]}.</b> ${esc(o)}</button>`}).join('')+`</div>`+
+        (ph==='reveal'?`<h2>${myAns===S.ans?'✅ Benar!':myAns==null?'⏱ Tidak menjawab':'❌ Salah'}</h2>`:myAns!=null?'<p>Jawaban terkunci. Tunggu hasil…</p>':'<div id="ptimer"></div>');
+    }else if(ph==='result'){
+      h=`<div class="tag">Ronde ${S.ri+1} selesai</div><h2>${esc(t.name)}</h2><div class="big">#${t.r}</div><p>Posisi ${Math.round(t.f*100)}% menuju puncak</p><p>Lihat layar utama…</p>`;
+    }else if(ph==='end'){
+      h=`<div class="tag">Finish</div><h2>${t.r===1?'🏆 Juara!':esc(t.name)}</h2><div class="big">#${t.r}</div><p>Terima kasih sudah bermain!</p>`;
+    }
+    B.innerHTML=h;
+    const sb=$('sb');if(sb)sb.onclick=sensors;
+    B.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>net.send({t:'team',team:+b.dataset.t}));
+    B.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{if(myAns!=null||S.phase!=='q')return;myAns=+b.dataset.a;net.send({t:'ans',q:S.q.i,a:myAns});draw()});
+    const pad=$('pad');
+    if(pad)pad.addEventListener('pointerdown',e=>{e.preventDefault();taps.push(performance.now());pad.classList.add('hit');setTimeout(()=>pad.classList.remove('hit'),60)});
+    tick();
+  }
+  return{init};
+})();
+
+route();
+</script>
+</body>
+</html>
