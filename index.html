@@ -42,7 +42,7 @@ h1,h2,h3{margin:0;font-weight:700}
 #menu svg{position:absolute;left:0;right:0;bottom:0;width:100%;height:58%}
 #menu .in{position:relative;z-index:1;display:grid;gap:22px;justify-items:center;margin-top:-14vh}
 #menu .kicker{font-family:var(--fd);font-weight:600;font-size:clamp(16px,2vw,22px);color:var(--gold);letter-spacing:.04em}
-#menu h1{font-family:var(--fd);font-weight:800;font-size:clamp(52px,9vw,128px);line-height:.86;letter-spacing:-.01em}
+#menu h1{font-family:var(--fd);font-weight:800;font-size:clamp(48px,8vw,116px);line-height:.88;letter-spacing:-.01em;max-width:9.5em;overflow-wrap:anywhere}
 #menu p{color:var(--soft);max-width:30em;margin:0;line-height:1.55}
 #menu .row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px}
 #menu button{font-size:17px;padding:.9em 1.6em}
@@ -232,7 +232,7 @@ input[type=color]{padding:3px;height:40px;cursor:pointer}
   </svg>
   <div class="in">
     <div class="kicker">Team game</div>
-    <h1>Trail Summit<br>Challenge</h1>
+    <h1 id="mtitle">Trail Summit Challenge</h1>
     <p>Pendakian tim menuju puncak. Buka layar ini di laptop atau proyektor, lalu pemain bergabung dari HP dengan scan QR.</p>
     <div class="row">
       <button onclick="go('host')">Buka layar host</button>
@@ -263,7 +263,7 @@ input[type=color]{padding:3px;height:40px;cursor:pointer}
 <div id="admin" class="screen hide"></div>
 
 <div id="phone" class="screen hide">
-  <div id="phead"><div class="me"><b id="pname">Trail Summit</b><span id="pteam">Menghubungkan</span></div><div class="st" id="pst"></div></div>
+  <div id="phead"><div class="me"><b id="pname"></b><span id="pteam">Menghubungkan</span></div><div class="st" id="pst"></div></div>
   <div id="pbody"></div>
   <div id="pstat"><i></i><span id="pstt">Menghubungkan…</span></div>
 </div>
@@ -318,7 +318,7 @@ function route(){
   const h=location.hash.slice(1);
   if(h==='host'){show('host');if(!hostStarted){hostStarted=true;Host.init()}else Host.reloadCfg()}
   else if(h==='admin'){show('admin');Admin.render()}
-  else show('menu');
+  else{show('menu');const t=loadCfg().title||'Trail Summit Challenge';$('mtitle').textContent=t;document.title=t}
 }
 window.addEventListener('hashchange',route);
 
@@ -380,7 +380,7 @@ const Host=(()=>{
   const TW=.235; // timing tower share of width
 
   function init(){
-    cfg=loadCfg();
+    cfg=loadCfg();document.title=cfg.title;
     room=sessionStorage.getItem('trail_room');
     if(!room){room=Array.from({length:4},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ'[Math.random()*24|0]).join('');sessionStorage.setItem('trail_room',room)}
     cv=$('cv');cx=cv.getContext('2d');
@@ -400,7 +400,7 @@ const Host=(()=>{
     setInterval(()=>{net.broadcast({t:'st',teams:T.map(t=>({f:+frac(t).toFixed(3),r:t.rank}))})},1000);
     setInterval(()=>{if(G.phase==='lobby')net.broadcast(pub())},3000);
   }
-  function reloadCfg(){if(G.phase==='lobby'){cfg=loadCfg();resetTeams();for(const k in P)if(P[k].team>=cfg.teamCount)P[k].team=smallest();drawLobby();ui();net.broadcast(pub());for(const k in P)sendMe(k)}}
+  function reloadCfg(){if(G.phase==='lobby'){cfg=loadCfg();document.title=cfg.title;resetTeams();for(const k in P)if(P[k].team>=cfg.teamCount)P[k].team=smallest();drawLobby();ui();net.broadcast(pub());for(const k in P)sendMe(k)}}
   function resize(){DPR=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;bgC=null}
   function resetTeams(){
     T=cfg.teams.slice(0,cfg.teamCount).map((t,i)=>({i,name:t.name,color:t.color,p:0,r0:0,disp:0,int:0,wheel:0,fin:0,rank:i+1,spd:0}));
@@ -458,7 +458,7 @@ const Host=(()=>{
     else if(G.phase==='end')toLobby();
   }
   function skip(){if(['intro','play','q','reveal'].includes(G.phase))G.timer=0}
-  function toLobby(){cfg=loadCfg();resetTeams();G.ri=-1;G.q=null;for(const k in P){P[k].v=0;if(P[k].team>=cfg.teamCount)P[k].team=smallest()}setPhase('lobby');drawLobby();for(const k in P)sendMe(k)}
+  function toLobby(){cfg=loadCfg();document.title=cfg.title;resetTeams();G.ri=-1;G.q=null;for(const k in P){P[k].v=0;if(P[k].team>=cfg.teamCount)P[k].team=smallest()}setPhase('lobby');drawLobby();for(const k in P)sendMe(k)}
   function start(){resetTeams();G.ri=-1;nextRound()}
   function nextRound(){
     G.ri++;G.q=null;
@@ -568,7 +568,7 @@ const Host=(()=>{
     tower(false);
   }
   function drawLobby(){
-    const url=location.origin+location.pathname+'?j='+room+(QS.has('local')?'&local=1':'');
+    const url=location.origin+location.pathname+'?j='+room+'&n='+encodeURIComponent(cfg.title.slice(0,40))+(QS.has('local')?'&local=1':'');
     let teams='';
     for(let i=0;i<cfg.teamCount;i++){const t=cfg.teams[i],ms=members(i);
       teams+=`<div class="tc" style="--c:${t.color}"><div class="hd"><b>${esc(t.name)}</b><span class="ct">${ms.length}</span></div><div class="chips">${ms.length?ms.map(p=>`<span class="chip ${online(p)?'':'off'}">${esc(p.name)}</span>`).join(''):'<span class="empty">Belum ada pemain</span>'}</div></div>`}
@@ -945,8 +945,8 @@ const Admin=(()=>{
       <button class="ghost danger" onclick="Admin.reset()">Kembalikan default</button>
       <input type="file" id="imp" accept=".json,application/json" class="hide" onchange="Admin.imp(this)"></div></div><main>
       <p class="intro-t">Pengaturan tersimpan di browser laptop ini. Buka layar host dari browser yang sama. Perubahan dipakai saat game berada di lobby.</p>`;
-    h+=`<div class="sec"><div><h2>Umum</h2><p>Nama acara, jumlah tim, dan kepekaan sensor HP.</p></div><div class="fg">
-      ${f('Judul acara','title','text')}
+    h+=`<div class="sec"><div><h2>Umum</h2><p>Nama game tampil di menu, layar host, QR, HP pemain, dan layar juara. Jumlah tim dan kepekaan sensor HP juga diatur di sini.</p></div><div class="fg">
+      ${f('Nama game','title','text','maxlength=40')}
       ${f('Jumlah tim (1–10)','teamCount','number','min=1 max=10')}
       ${f('Panjang lintasan, % dari total poin','trackPct','number','min=20 max=100')}
       ${f('Kepekaan mic (0,5–2)','micSens','number','step=0.1 min=0.3 max=3')}
@@ -992,11 +992,11 @@ const Admin=(()=>{
 
 /* ===================== PHONE ===================== */
 const Phone=(()=>{
-  let net,room,pid,name='',me=null,S=null,connected=false,endAt=0,inited=false;
+  let net,room,pid,name='',me=null,S=null,connected=false,endAt=0,inited=false,gtitle=(QS.get('n')||'Trail Summit Challenge').slice(0,40);
   let micOK=false,motionOK=false,sensorsAsked=false,an=null,buf=null,micV=0,shakeV=0,taps=[],v=0,myAns=null,ansQ=-1,lastKey='';
   const RING=2*Math.PI*46;
   function init(r){
-    if(inited)return;inited=true;room=r;
+    if(inited)return;inited=true;room=r;document.title=gtitle;
     try{pid=localStorage.getItem('trail_pid');name=localStorage.getItem('trail_name')||''}catch(e){}
     if(!pid){pid='p'+Math.random().toString(36).slice(2,10);try{localStorage.setItem('trail_pid',pid)}catch(e){}}
     if(QS.get('pid'))pid=QS.get('pid');
@@ -1008,7 +1008,7 @@ const Phone=(()=>{
   function stat(ok,t){$('pstat').classList.toggle('on',!!ok);$('pstt').textContent=t}
   function onMsg(m){
     if(m.t==='me'){me=m;stat(true,'Terhubung ke room '+room);draw()}
-    else if(m.t==='s'){S=m;endAt=performance.now()+m.left;if(m.phase==='q'&&m.q&&m.q.i!==ansQ){myAns=null;ansQ=m.q.i}if(m.phase==='intro'||m.phase==='lobby'){ansQ=-1;myAns=null}draw()}
+    else if(m.t==='s'){S=m;if(m.title&&m.title!==gtitle){gtitle=m.title;document.title=gtitle;if(!me)lastKey=''}endAt=performance.now()+m.left;if(m.phase==='q'&&m.q&&m.q.i!==ansQ){myAns=null;ansQ=m.q.i}if(m.phase==='intro'||m.phase==='lobby'){ansQ=-1;myAns=null}draw()}
     else if(m.t==='st'&&S){m.teams.forEach((t,i)=>{if(S.teams[i]){S.teams[i].f=t.f;S.teams[i].r=t.r}});head()}
     else if(m.t==='who'){if(name)net.send({t:'join',name})}
     else if(m.t==='full'){$('pbody').innerHTML='<h2>Room penuh</h2><p>Room ini sudah berisi 50 pemain, batas maksimal.</p>'}
@@ -1063,7 +1063,7 @@ const Phone=(()=>{
   }
   function head(){
     const t=me&&S&&S.teams[me.team];
-    $('pname').textContent=name||'Trail Summit';
+    $('pname').textContent=name||gtitle;
     if(t){
       $('phone').style.setProperty('--c',t.color);
       $('pteam').textContent=t.name;
@@ -1075,7 +1075,7 @@ const Phone=(()=>{
     const B=$('pbody');
     if(!me){
       if(lastKey==='join')return;lastKey='join';
-      B.innerHTML=`<div class="k">Room ${esc(room)}</div><h2>Trail Summit Challenge</h2><p>Isi nama yang akan tampil di layar utama.</p><input id="nm" maxlength="16" placeholder="Nama kamu" value="${esc(name)}" autocomplete="nickname"><button class="cta" id="jb">Gabung</button>`;
+      B.innerHTML=`<div class="k">Room ${esc(room)}</div><h2>${esc(gtitle)}</h2><p>Isi nama yang akan tampil di layar utama.</p><input id="nm" maxlength="16" placeholder="Nama kamu" value="${esc(name)}" autocomplete="nickname"><button class="cta" id="jb">Gabung</button>`;
       $('jb').onclick=()=>{name=$('nm').value.trim()||'Pemain';try{localStorage.setItem('trail_name',name)}catch(e){}net.send({t:'join',name});stat(connected,connected?'Bergabung…':'Menunggu layar host…')};
       return;
     }
