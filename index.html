@@ -288,7 +288,7 @@ const COLORS=['#2F5BEA','#E5484D','#30A46C','#F5A524','#8E4EC6','#12A594','#D640
 const SOLO_COLORS=['#2F5BEA','#E5484D','#30A46C','#F5A524','#8E4EC6','#12A594','#D6409F','#8DB600','#F76B15','#E6E8EC','#0091FF','#AB4ABA','#FFC53D','#46A758','#E54666','#3E63DD','#F0C000','#00A2C7','#C2298A','#7CE2FE'];
 const TNAMES=['Biru','Merah','Hijau','Kuning','Ungu','Tosca','Pink','Lime','Oranye','Putih'];
 const DEFAULT_CFG={
-  title:'Trail Summit Challenge',mode:'team',teamCount:4,pick:true,trackPct:55,micSens:1,shakeSens:1,tapMax:8,
+  title:'Trail Summit Challenge',shopName:'YAMAHA',mode:'team',teamCount:4,pick:true,trackPct:55,micSens:1,shakeSens:1,tapMax:8,
   teams:TNAMES.map((n,i)=>({name:'Tim '+n,color:COLORS[i]})),
   rounds:[
     {type:'tap',title:'Langkah pertama',desc:'Tap tombol secepat mungkin untuk melangkah.',dur:20,pts:20,qCount:3,qTime:15},
@@ -615,7 +615,7 @@ const Host=(()=>{
       const d=Math.hypot(i+.5-PK[0]-.5,j+.5-PK[1]-.5)/(N*1.02);
       let v=Math.pow(Math.max(0,1-d),1.5)*PEAK*1.32;
       v+=.75*Math.sin(i*.85+1.3)*Math.cos(j*.7+.4)+.45*Math.sin((i-j)*.55+.8)+.35*Math.cos(i*1.7+j*.3);
-      if(Math.hypot(i-PK[0],j-PK[1])<1.1)v=PEAK;
+      if(i>=PK[0]-2&&i<=PK[0]+1&&j>=PK[1]-2&&j<=PK[1]+1)v=PEAK;
       ht[i][j]=Math.max(0,Math.min(PEAK,Math.floor(v)));
     }}
     for(let i=0;i<N;i++)for(let j=0;j<N;j++)if((i>=N-2||j>=N-2)&&ht[i][j]>1)ht[i][j]=1;
@@ -670,10 +670,10 @@ const Host=(()=>{
     // decorations by biome
     const deco={};
     const tentAt=[];let acc=0;cfg.rounds.forEach(r=>{acc+=+r.pts||0;const u=acc/G.trackLen;if(u<.95)tentAt.push(u)});
-    tentAt.forEach(u=>{const q=pathAt(u).p,i=Math.floor(q[0]),j=Math.floor(q[1]);for(const[a,b]of[[-1,0],[0,-1],[-1,-1],[1,-1],[-1,1]]){const x=i+a,y=j+b,k=x+','+y;if(x>=0&&y>=0&&x<N&&y<N&&onPath[k]==null&&!water[k]&&!byTile[k]&&!deco[k]){deco[k]={t:'tent',c:R()};break}}});
+    tentAt.forEach(u=>{const q=pathAt(u).p,i=Math.floor(q[0]),j=Math.floor(q[1]);for(const[a,b]of[[-1,0],[0,-1],[-1,-1],[1,-1],[-1,1]]){const x=i+a,y=j+b,k=x+','+y;if(x>=0&&y>=0&&x<N&&y<N&&onPath[k]==null&&!water[k]&&!byTile[k]&&!deco[k]&&!(x>=PK[0]-2&&x<=PK[0]+1&&y>=PK[1]-2&&y<=PK[1]+1)){deco[k]={t:'tent',c:R()};break}}});
     const bc=[start[0]-2,start[1]];deco[bc[0]+','+bc[1]]={t:'cabin'};deco[(start[0]-1)+','+(start[1]-1)]={t:'fire'};deco[(start[0]+1)+','+start[1]]={t:'sign'};
     for(let i=0;i<N;i++)for(let j=0;j<N;j++){
-      const k=i+','+j;if(deco[k]||water[k]||byTile[k])continue;
+      const k=i+','+j;if(deco[k]||water[k]||byTile[k]||(i>=PK[0]-2&&i<=PK[0]+1&&j>=PK[1]-2&&j<=PK[1]+1))continue;
       const h=ht[i][j];
       let infront=false;for(const[a,b]of[[-1,0],[0,-1],[-1,-1],[-2,-1],[-1,-2]])if(byTile[(i+a)+','+(j+b)])infront=true;
       const pr=h===0?.22:h<=3?.62:h<=5?.32:h===6?.12:0;
@@ -773,6 +773,50 @@ const Host=(()=>{
     poly(c,[g(.8,.3,z),g(.8,.75,z),g(.8,.5,z+.75)],shadeC(cs,-.4));
     poly(c,[g(.8,.45,z),g(.8,.6,z),g(.8,.52,z+.4)],'#3A2A22');
   }
+  function dealer(c,z){
+    const x0=PK[0]-1.9,x1=PK[0]+.96,y0=PK[1]-1.9,y1=PK[1]+.96,hz=1.55,fz=.52;
+    const g=(x,y,zz)=>IP(x,y,zz);
+    const q=(pts,col)=>poly(c,pts,col);
+    // walls: right side (+i face) white, left front (+j face) glass showroom
+    q([g(x1,y0,z),g(x1,y1,z),g(x1,y1,z+hz),g(x1,y0,z+hz)],'#C9CED6');
+    q([g(x0,y1,z),g(x1,y1,z),g(x1,y1,z+hz),g(x0,y1,z+hz)],'#EEF1F5');
+    // glass panes on the showroom front
+    const gl=c.createLinearGradient(0,g(x0,y1,z+hz)[1],0,g(x0,y1,z)[1]);gl.addColorStop(0,'#7FB2E5');gl.addColorStop(.6,'#B9D8F2');gl.addColorStop(1,'#FFE2B0');
+    const pz0=z+.08,pz1=z+hz-fz-.06;
+    q([g(x0+.08,y1+.005,pz0),g(x1-.08,y1+.005,pz0),g(x1-.08,y1+.005,pz1),g(x0+.08,y1+.005,pz1)],gl);
+    c.strokeStyle='#5E6B7D';c.lineWidth=1.4;c.beginPath();
+    for(let t=x0+.08;t<=x1-.07;t+=(x1-x0-.16)/4){const a=g(t,y1+.006,pz0),b=g(t,y1+.006,pz1);c.moveTo(a[0],a[1]);c.lineTo(b[0],b[1])}
+    const m0=g(x0+.08,y1+.006,(pz0+pz1)/2+.12),m1=g(x1-.08,y1+.006,(pz0+pz1)/2+.12);c.moveTo(m0[0],m0[1]);c.lineTo(m1[0],m1[1]);c.stroke();
+    // door on the right face + window strip
+    q([g(x1+.005,y0+.25,z+.02),g(x1+.005,y0+.25,z+.62),g(x1+.005,y0+.62,z+.62),g(x1+.005,y0+.62,z+.02)],'#8FB3D9');
+    q([g(x1+.005,y0+.82,z+.32),g(x1+.005,y0+.82,z+.62),g(x1+.005,y1-.1,z+.62),g(x1+.005,y1-.1,z+.32)],'#A9C8E8');
+    // fascia band (brand blue) and roof slab
+    const fb=z+hz-fz;
+    q([g(x1+.04,y0-.04,fb),g(x1+.04,y1+.04,fb),g(x1+.04,y1+.04,z+hz),g(x1+.04,y0-.04,z+hz)],'#1A3FA8');
+    q([g(x0-.04,y1+.04,fb),g(x1+.04,y1+.04,fb),g(x1+.04,y1+.04,z+hz),g(x0-.04,y1+.04,z+hz)],'#2453CE');
+    q([g(x0-.06,y0-.06,z+hz),g(x1+.06,y0-.06,z+hz),g(x1+.06,y1+.06,z+hz),g(x0-.06,y1+.06,z+hz)],'#E9ECF1');
+    q([g(x1+.06,y0-.06,z+hz),g(x1+.06,y1+.06,z+hz),g(x1+.06,y1+.06,z+hz+.08),g(x1+.06,y0-.06,z+hz+.08)],'#B7BDC7');
+    q([g(x0-.06,y1+.06,z+hz),g(x1+.06,y1+.06,z+hz),g(x1+.06,y1+.06,z+hz+.08),g(x0-.06,y1+.06,z+hz+.08)],'#D3D8DF');
+    // sign text on both fascias, drawn in the plane of each face
+    const txt=(cfg.shopName||'YAMAHA').toUpperCase();
+    const sign=(o,ux,uy,len)=>{c.save();c.translate(o[0],o[1]);c.transform(ux/100,uy/100,0,ISO.zh/100,0,0);
+      c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';let fs=fz*100*.62;c.font=`800 ${fs}px "Saira Condensed","Arial Narrow",sans-serif`;
+      const w=c.measureText(txt).width;if(w>len*100*.9){fs*=len*100*.9/w;c.font=`800 ${fs}px "Saira Condensed","Arial Narrow",sans-serif`}
+      c.fillText(txt,len*50,fz*50);c.restore()};
+    sign(g(x0-.04,y1+.04,z+hz),ISO.hw,ISO.hh,x1-x0+.08);
+    sign(g(x1+.04,y1+.04,z+hz),ISO.hw,-ISO.hh,y1-y0+.08);
+    // pylon sign on the plaza
+    const pb=g(x1+.55,y0+.35,z),pt=g(x1+.55,y0+.35,z+2.9);
+    c.fillStyle='#9AA1AC';c.fillRect(pb[0]-1.5,pt[1],3,pb[1]-pt[1]);
+    const pw=ISO.hw*1.25,ph=ISO.zh*.72;
+    c.fillStyle='#1A3FA8';c.fillRect(pt[0]-pw/2-2,pt[1]-ph-2,pw+4,ph+4);
+    c.fillStyle='#2453CE';c.fillRect(pt[0]-pw/2,pt[1]-ph,pw,ph);
+    c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';let fs=ph*.55;c.font=`800 ${fs}px "Saira Condensed","Arial Narrow",sans-serif`;
+    const w=c.measureText(txt).width;if(w>pw*.86){fs*=pw*.86/w;c.font=`800 ${fs}px "Saira Condensed","Arial Narrow",sans-serif`}
+    c.fillText(txt,pt[0],pt[1]-ph/2+1);
+    // potted shrubs by the entrance
+    for(const yy of [y0+1.2,y0+2.4]){const p=g(x1+.18,yy,z);c.fillStyle='#8A8F99';c.fillRect(p[0]-3,p[1]-4,6,4);c.fillStyle='#5E9441';c.beginPath();c.arc(p[0],p[1]-7,4,0,7);c.fill()}
+  }
   function buildBg(){
     isoBuild();
     bgC=document.createElement('canvas');bgC.width=W*DPR;bgC.height=H*DPR;
@@ -799,30 +843,7 @@ const Host=(()=>{
       poly(c,T,isW?'#5FB8C8':topColor(i,j,h,n));
       if(isW){c.strokeStyle='rgba(255,255,255,.5)';c.lineWidth=1.1;const m=IP(i+.5,j+.5,top);c.beginPath();c.moveTo(m[0]-ISO.hw*.3,m[1]);c.quadraticCurveTo(m[0],m[1]-ISO.hh*.25,m[0]+ISO.hw*.3,m[1]);c.stroke()}
       else{c.strokeStyle='rgba(255,255,255,.09)';c.lineWidth=1;c.beginPath();c.moveTo(T[3][0],T[3][1]);c.lineTo(T[0][0],T[0][1]);c.lineTo(T[1][0],T[1][1]);c.stroke()}
-      // trail: flat ground decal following the terrain
-      const idx=byTile[k];
-      if(idx){
-        const runs=[];let cur=[idx[0]];for(let q=1;q<idx.length;q++){if(idx[q]===idx[q-1]+1)cur.push(idx[q]);else{runs.push(cur);cur=[idx[q]]}}runs.push(cur);
-        for(const run of runs){
-          const a=Math.max(0,run[0]-1),b=Math.min(sm.length-1,run[run.length-1]+1);
-          const E=(q,w)=>{const p=sm[q],pa=sm[Math.max(0,q-1)],pb=sm[Math.min(sm.length-1,q+1)],dx=pb[0]-pa[0],dy=pb[1]-pa[1],L=Math.hypot(dx,dy)||1,ww=w*(1+.13*Math.sin(q*.83)+.07*Math.sin(q*2.1));
-            return[IP(p[0]-dy/L*ww,p[1]+dx/L*ww,p[2]+.015),IP(p[0]+dy/L*ww,p[1]-dx/L*ww,p[2]+.015)]};
-          const ramp=q=>Math.abs(sm[q+1][2]-sm[q][2])>.012;
-          for(const[w,flat,st]of[[.235,isW?'#6B4A2E':'#B08A5A','#8C8378'],[.185,isW?'#A8784A':'#DCB984','#C2B8AB']]){
-            for(let q=a;q<b;q++){const e0=E(q,w),e1=E(q+1,w),col=ramp(q)&&!isW?st:flat;
-              c.beginPath();c.moveTo(e0[0][0],e0[0][1]);c.lineTo(e1[0][0],e1[0][1]);c.lineTo(e1[1][0],e1[1][1]);c.lineTo(e0[1][0],e0[1][1]);c.closePath();
-              c.fillStyle=col;c.fill();c.strokeStyle=col;c.lineWidth=.7;c.stroke()}
-          }
-          if(isW){c.strokeStyle='#6B4A2E';c.lineWidth=1;c.beginPath();for(let q=a;q<=b;q+=2){const e=E(q,.2);c.moveTo(e[0][0],e[0][1]);c.lineTo(e[1][0],e[1][1])}c.stroke()}
-          else{
-            c.strokeStyle='#8E857A';c.lineWidth=1.1;c.beginPath();
-            for(let q=a;q<b;q++)if(ramp(q)&&q%2===0){const e=E(q,.18);c.moveTo(e[0][0],e[0][1]);c.lineTo(e[1][0],e[1][1])}
-            c.stroke();
-            const pr=rnd(i*131+j*17);
-            for(let q=a;q<=b;q+=3){const p=sm[q],o=(pr()-.5)*.26,o2=(pr()-.5)*.2,P0=IP(p[0]+o,p[1]+o2,p[2]+.02);c.fillStyle=pr()<.5?'rgba(255,245,225,.55)':'rgba(140,105,70,.45)';c.beginPath();c.ellipse(P0[0],P0[1],ISO.hw*.035,ISO.hh*.035,0,0,7);c.fill()}
-          }
-        }
-      }
+      if(i===PK[0]&&j===PK[1])dealer(c,top);
       const d=deco[k];
       if(d){
         const m=IP(i+.5+(d.ox||0),j+.5+(d.oy||0),top);
@@ -864,7 +885,7 @@ const Host=(()=>{
     let acc=0;
     cfg.rounds.forEach((r,i)=>{acc+=+r.pts||0;const u=acc/G.trackLen;if(u<.95)flagAt(u,'Pos '+(i+1),u<=lead)});
     flagAt(0,'Start',true);
-    const sm=IP(PK[0]+1,PK[1]+1,PEAK);summitFlag(sm[0],sm[1]);
+    const sm=IP(PK[0]+1.8,PK[1]-1.3,PEAK);summitFlag(sm[0],sm[1]);
     const act=T.filter(t=>G.phase==='lobby'||members(t.i).length);
     const many=act.length>12,hs=ISO.hw/56*(many?.78:1);
     const list=act.map(t=>{
@@ -903,11 +924,11 @@ const Host=(()=>{
     cx.textAlign='center';cx.textBaseline='top';cx.lineWidth=3;cx.strokeStyle='rgba(40,18,30,.65)';cx.strokeText(txt,s[0],s[1]+3);cx.fillStyle='#FBF4F1';cx.fillText(txt,s[0],s[1]+3);
   }
   function summitFlag(x,y){
-    const h=ISO.hw*2.1,wv=Math.sin(G.time*3)*h*.04;
+    const h=ISO.hw*1.6,wv=Math.sin(G.time*3)*h*.04;
     cx.strokeStyle='#F4EEE8';cx.lineWidth=2;cx.beginPath();cx.moveTo(x,y);cx.lineTo(x,y-h);cx.stroke();
     cx.fillStyle='#FFB547';cx.beginPath();cx.moveTo(x,y-h);cx.quadraticCurveTo(x+h*.3,y-h-h*.04+wv,x+h*.6,y-h+h*.02);cx.lineTo(x+h*.6,y-h+h*.3);cx.quadraticCurveTo(x+h*.3,y-h+h*.26-wv,x,y-h+h*.3);cx.fill();
     const fs=Math.max(12,H*.02);cx.font=`700 ${fs}px "Saira Condensed","Arial Narrow",sans-serif`;
-    cx.textAlign='right';cx.textBaseline='middle';cx.lineWidth=3;cx.strokeStyle='rgba(40,18,30,.6)';cx.strokeText('Puncak',x-6,y-h+h*.15);cx.fillStyle='#FBF4F1';cx.fillText('Puncak',x-6,y-h+h*.15);
+    cx.textAlign='left';cx.textBaseline='middle';cx.lineWidth=3;cx.strokeStyle='rgba(40,18,30,.6)';cx.strokeText('Puncak',x+h*.66,y-h+h*.15);cx.fillStyle='#FBF4F1';cx.fillText('Puncak',x+h*.66,y-h+h*.15);
   }
   function lum(h){const n=parseInt(h.slice(1),16);return(.299*(n>>16&255)+.587*(n>>8&255)+.114*(n&255))/255}
   function rr(x,y,w,h,r){cx.beginPath();cx.moveTo(x+r,y);cx.arcTo(x+w,y,x+w,y+h,r);cx.arcTo(x+w,y+h,x,y+h,r);cx.arcTo(x,y+h,x,y,r);cx.arcTo(x,y,x+w,y,r);cx.closePath()}
@@ -1043,6 +1064,7 @@ const Admin=(()=>{
       <p class="intro-t">Pengaturan tersimpan di browser laptop ini. Buka layar host dari browser yang sama. Perubahan dipakai saat game berada di lobby.</p>`;
     h+=`<div class="sec"><div><h2>Umum</h2><p>Nama game tampil di menu, layar host, QR, HP pemain, dan layar juara. Jumlah tim dan kepekaan sensor HP juga diatur di sini.</p></div><div class="fg">
       ${f('Nama game','title','text','maxlength=40')}
+      ${f('Tulisan papan dealer di puncak','shopName','text','maxlength=24')}
       <div><label>Mode permainan</label><select data-k="mode" data-re="1"><option value="team" ${c.mode!=='solo'?'selected':''}>Tim</option><option value="solo" ${c.mode==='solo'?'selected':''}>Individu, tiap pemain mendaki sendiri</option></select></div>
       ${c.mode==='solo'?'':f('Jumlah tim (1–10)','teamCount','number','min=1 max=10')}
       ${f('Panjang lintasan, % dari total poin','trackPct','number','min=20 max=100')}
