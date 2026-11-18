@@ -75,6 +75,7 @@ body.light .po button i,body.light .quiz .o i{background:rgba(24,44,90,.08)}
 #menu .games{display:grid;grid-template-columns:repeat(2,minmax(0,300px));gap:14px;margin-top:6px}
 #menu button.game{display:grid;gap:6px;text-align:left;padding:18px 20px;border-radius:16px;background:rgba(23,13,27,.78);color:var(--snow);box-shadow:inset 0 0 0 1px var(--line2);backdrop-filter:blur(8px)}
 #menu button.game:hover{background:rgba(23,13,27,.9);box-shadow:inset 0 0 0 1.5px var(--gold)}
+#menu button.game .glogo{height:22px;width:auto;margin-bottom:2px}
 #menu button.game b{font-family:var(--fd);font-size:26px;font-weight:700;line-height:1}
 #menu button.game span{font-size:13.5px;color:var(--soft);font-weight:400;line-height:1.4}
 @media(max-width:640px){#menu .games{grid-template-columns:1fr}}
@@ -118,6 +119,8 @@ body.light .po button i,body.light .quiz .o i{background:rgba(24,44,90,.08)}
   background:linear-gradient(90deg,rgba(23,13,27,.94) 0%,rgba(23,13,27,.82) 55%,rgba(23,13,27,.5) 100%)}
 #lobby .jn{display:grid;gap:2vh;justify-items:start}
 #lobby .ev{font-family:var(--fd);font-weight:800;font-size:6.4vh;line-height:.92;max-width:11em}
+#lobby .llogo{height:5.2vh;width:auto;margin-bottom:.4vh}
+#hud .hlogo{height:3.4vh;width:auto;display:block;margin-bottom:1vh}
 #lobby .how{color:var(--soft);font-size:2vh;line-height:1.5;max-width:22em}
 #qr{background:#fff;padding:1.6vh;border-radius:14px;line-height:0}
 #qr img,#qr canvas{width:27vh!important;height:27vh!important;display:block}
@@ -270,6 +273,7 @@ input[type=color]{padding:3px;height:40px;cursor:pointer}
 .po button.no{box-shadow:inset 0 0 0 1.5px var(--bad);background:rgba(240,86,91,.14)}
 .po button:disabled{opacity:1}
 .verdict{font-family:var(--fd);font-weight:800;font-size:34px}
+.plogo{height:34px;width:auto;align-self:flex-start}
 .gtop{display:flex;align-items:baseline;gap:8px;color:var(--mute);font-size:13px}.gtop span:first-child{font-family:var(--fd);font-weight:700;font-size:26px;color:var(--snow);font-variant-numeric:tabular-nums}
 .gl2{display:grid;gap:10px}
 .gord,.gcard{display:grid;grid-template-columns:16px 1fr auto;gap:12px;align-items:center;text-align:left;background:rgba(255,255,255,.06);color:var(--snow);border-radius:14px;padding:14px;box-shadow:inset 0 0 0 1px var(--line);font-weight:500}
@@ -306,7 +310,7 @@ input[type=color]{padding:3px;height:40px;cursor:pointer}
     <p>Buka layar ini di laptop atau proyektor, pilih game, lalu pemain bergabung dari HP dengan scan QR.</p>
     <div class="games">
       <button class="game" onclick="go('host')"><b id="mg1">Trail Summit Challenge</b><span>Pendakian tim ke puncak dengan teriak, tap, goyang, dan kuis</span></button>
-      <button class="game" onclick="go('gudang')"><b id="mg2">Gudang Motor Online</b><span>Proses pesanan motor dari order sampai dikirim truk</span></button>
+      <button class="game" onclick="go('gudang')"><img class="glogo" src="assets/yours-logo-white.png" alt="YOURS" onerror="this.remove()"><b id="mg2">Gudang Motor Online</b><span>Proses pesanan motor dari order sampai dikirim truk</span></button>
     </div>
     <div class="row">
       <button class="ghost" onclick="go('admin')">Atur challenge</button>
@@ -387,6 +391,8 @@ function normCfg(c){
   if(!Array.isArray(o.quiz))o.quiz=[];
   return o;
 }
+const LOGO=new Image();LOGO.src='assets/yours-logo.png';const LOGOW=new Image();LOGOW.src='assets/yours-logo-white.png';
+const logoOK=()=>LOGO.complete&&LOGO.naturalWidth>0;
 function parseModels(s){return String(s||'').split(',').map(x=>x.trim()).filter(Boolean).slice(0,16)}
 function parseColors(s){return String(s||'').split(',').map(x=>{const[a,b]=x.split(':');return{n:(a||'').trim(),h:/^#[0-9a-f]{6}$/i.test((b||'').trim())?b.trim():'#888888'}}).filter(c=>c.n).slice(0,10)}
 function parseRegions(s){return String(s||'').split(';').map(x=>{const[a,b]=x.split(':');return{n:(a||'').trim(),c:String(b||'').split(',').map(y=>y.trim()).filter(Boolean)}}).filter(r=>r.n&&r.c.length).slice(0,3)}
@@ -746,7 +752,7 @@ const Host=(()=>{
     const r=RD(G.ri),ph=G.phase,RL=isG()?'Shift':'Ronde';
     $('lobby').classList.toggle('hide',ph!=='lobby');gOrdersDom();
     $('hud').classList.toggle('hide',ph==='lobby'||ph==='end'||ph==='intro');
-    $('hud').innerHTML=r?`<div class="ev">${esc(TITLE())}</div><div class="rn">${RL} ${G.ri+1} dari ${RN()}</div><div class="rt">${esc(r.title)}</div>
+    $('hud').innerHTML=r?`${isG()?'<img class="hlogo" src="assets/yours-logo.png" alt="YOURS" onerror="this.remove()">':''}<div class="ev">${esc(TITLE())}</div><div class="rn">${RL} ${G.ri+1} dari ${RN()}</div><div class="rt">${esc(r.title)}</div>
       <div id="tmw" class="${ph==='play'||ph==='q'?'':'hide'}"><div class="tm"><b id="hTime"></b><span id="hUnit">detik</span></div><div class="tb"><i id="hBar"></i></div></div>`:'';
     $('bMain').textContent=ph==='lobby'?'Mulai game':ph==='result'?(G.ri+1>=RN()?'Lihat pemenang':RL+' berikutnya'):ph==='end'?'Kembali ke lobby':RL+' berjalan';
     $('bMain').disabled=!['lobby','result','end'].includes(ph);
@@ -797,13 +803,13 @@ const Host=(()=>{
     tower(false);
   }
   function drawLobby(){
-    const url=location.origin+location.pathname+'?j='+room+'&n='+encodeURIComponent(TITLE().slice(0,40))+(QS.has('local')?'&local=1':'');
+    const url=location.origin+location.pathname+'?j='+room+(isG()?'&g=1':'')+'&n='+encodeURIComponent(TITLE().slice(0,40))+(QS.has('local')?'&local=1':'');
     let teams='';
     if(SOLO()){const ps=Object.values(P).sort((a,b)=>(a.jt||0)-(b.jt||0));
       teams=`<div class="sl"><div class="hd"><b>Pemain</b><span class="ct">${ps.length} / 50</span></div><div class="chips">${ps.length?ps.map(p=>`<span class="chip pchip ${online(p)?'':'off'}" style="--c:${(T[p.team]||{}).color||'#888'}"><i></i>${esc(p.name)}</span>`).join(''):'<span class="empty">Belum ada pemain. Scan QR untuk bergabung.</span>'}</div></div>`}
     else for(let i=0;i<cfg.teamCount;i++){const t=cfg.teams[i],ms=members(i);
       teams+=`<div class="tc" style="--c:${t.color}"><div class="hd"><b>${esc(t.name)}</b><span class="ct">${ms.length}</span></div><div class="chips">${ms.length?ms.map(p=>`<span class="chip ${online(p)?'':'off'}">${esc(p.name)}</span>`).join(''):'<span class="empty">Belum ada pemain</span>'}</div></div>`}
-    $('lobby').innerHTML=`<div class="jn"><div class="ev">${esc(TITLE())}</div><div class="how">Buka kamera HP, scan kode ini, lalu isi nama kamu.</div><div id="qr"></div><div class="cd"><span>Kode room</span><b>${room}</b></div><div class="url">${esc(url)}</div></div><div class="tl">${teams}</div>`;
+    $('lobby').innerHTML=`<div class="jn">${isG()?'<img class="llogo" src="assets/yours-logo.png" alt="YOURS" onerror="this.remove()">':''}<div class="ev">${esc(TITLE())}</div><div class="how">Buka kamera HP, scan kode ini, lalu isi nama kamu.</div><div id="qr"></div><div class="cd"><span>Kode room</span><b>${room}</b></div><div class="url">${esc(url)}</div></div><div class="tl">${teams}</div>`;
     try{if(typeof QRCode!=='undefined')new QRCode($('qr'),{text:url,width:512,height:512,colorDark:'#170D1B',correctLevel:QRCode.CorrectLevel.M});else $('qr').innerHTML='<div style="color:#170D1B;line-height:1.4;padding:2vh;font-size:1.7vh;width:27vh">QR tidak termuat. Buka alamat di bawah dari HP.</div>'}catch(e){}
     if(!SOLO())T.forEach(t=>{const c=cfg.teams[t.i];t.name=c.name;t.color=c.color});tower(true);
   }
@@ -1326,13 +1332,21 @@ const Host=(()=>{
       cx.strokeStyle='#C5CEDB';cx.lineWidth=2;cx.beginPath();cx.moveTo(b[0],b[1]);cx.lineTo(p[0],p[1]);cx.stroke();
       pill(p[0],p[1]-6,'',r.n+'  '+GD.trucks[k].load+'/'+cap,'#2F5BEA',false)});
   }
+  function gRoofSign(){
+    if(!logoOK())return;const L=4.6,hgt=L*LOGO.naturalHeight/LOGO.naturalWidth;
+    const b0=IP(4.7,.35,WALL+.22),b1=IP(4.7+L,.35,WALL+.22);
+    cx.strokeStyle='#B7C2D3';cx.lineWidth=Math.max(1.5,ISO.hw*.05);cx.beginPath();
+    for(const t of[.5,L/2,L-.5]){const q0=IP(4.7+t,.35,WALL+.22),q1=IP(4.7+t,.35,WALL+.55);cx.moveTo(q0[0],q0[1]);cx.lineTo(q1[0],q1[1])}cx.stroke();
+    planeW(cx,4.7,.35,WALL+.55+hgt*1.3975,true,p=>{p.drawImage(LOGO,0,0,L*100,hgt*100)});
+  }
   function gBoard(){
     const a=ranking().slice(0,8);if(!a.length)return;const mx=Math.max(10,...a.map(t=>t.p));
     planeW(cx,.27,13.4,2.95,false,p=>{
       const Wb=800,Hb=150;
       p.save();p.shadowColor='rgba(40,60,110,.18)';p.shadowBlur=18;p.fillStyle='rgba(255,255,255,.96)';p.beginPath();p.roundRect?p.roundRect(0,0,Wb,Hb,12):p.rect(0,0,Wb,Hb);p.fill();p.restore();
       p.fillStyle='#2F5BEA';p.fillRect(0,0,7,Hb);
-      p.fillStyle='#2348C4';p.font='800 30px "Saira Condensed","Arial Narrow",sans-serif';p.textBaseline='alphabetic';p.fillText((cfg.shopName||'YAMAHA').toUpperCase()+' Gudang Online',24,40);
+      if(logoOK()){p.drawImage(LOGO,24,16,150,150*LOGO.naturalHeight/LOGO.naturalWidth);p.fillStyle='#2348C4';p.font='800 26px "Saira Condensed","Arial Narrow",sans-serif';p.textBaseline='alphabetic';p.fillText('Gudang Online',186,46)}
+      else{p.fillStyle='#2348C4';p.font='800 30px "Saira Condensed","Arial Narrow",sans-serif';p.textBaseline='alphabetic';p.fillText((cfg.shopName||'YAMAHA').toUpperCase()+' Gudang Online',24,40)}
       p.fillStyle='#7B8698';p.font='500 15px "Saira","Inter",sans-serif';p.fillText('Poin pengiriman per '+(SOLO()?'pemain':'tim'),24,62);
       const bw=Math.min(64,(Wb-290)/a.length-12);
       a.forEach((t,i)=>{const h=Math.max(4,t.p/mx*80),x=280+i*(bw+12),y=136;
@@ -1344,7 +1358,7 @@ const Host=(()=>{
   function gRender(dt){
     if(!bgC)gBuild();
     cx.setTransform(1,0,0,1,0,0);cx.drawImage(bgC,0,0);cx.setTransform(DPR,0,0,DPR,0,0);
-    gBoard();
+    gRoofSign();gBoard();
     const D=[];
     GD.trucks.forEach((t,k)=>D.push({d:14.0+BAYS[k],f:()=>gTruck(k)}));
     const ws=Object.entries(P).filter(([k,p])=>p.w);
@@ -1566,7 +1580,7 @@ const Phone=(()=>{
   const later=ms=>setTimeout(()=>{lastKey='';draw()},ms+40);
   const RING=2*Math.PI*46;
   function init(r){
-    if(inited)return;inited=true;room=r;document.title=gtitle;
+    if(inited)return;inited=true;room=r;document.title=gtitle;if(QS.get('g'))document.body.classList.add('light');
     try{pid=localStorage.getItem('trail_pid');name=localStorage.getItem('trail_name')||''}catch(e){}
     if(!pid){pid='p'+Math.random().toString(36).slice(2,10);try{localStorage.setItem('trail_pid',pid)}catch(e){}}
     if(QS.get('pid'))pid=QS.get('pid');
@@ -1685,7 +1699,7 @@ const Phone=(()=>{
     const B=$('pbody');
     if(!me){
       if(lastKey==='join')return;lastKey='join';
-      B.innerHTML=`<div class="k">Room ${esc(room)}</div><h2>${esc(gtitle)}</h2><p>Isi nama yang akan tampil di layar utama.</p><input id="nm" maxlength="16" placeholder="Nama kamu" value="${esc(name)}" autocomplete="nickname"><button class="cta" id="jb">Gabung</button>`;
+      B.innerHTML=`${QS.get('g')?'<img class="plogo" src="assets/yours-logo.png" alt="YOURS" onerror="this.remove()">':''}<div class="k">Room ${esc(room)}</div><h2>${esc(gtitle)}</h2><p>Isi nama yang akan tampil di layar utama.</p><input id="nm" maxlength="16" placeholder="Nama kamu" value="${esc(name)}" autocomplete="nickname"><button class="cta" id="jb">Gabung</button>`;
       $('jb').onclick=()=>{name=$('nm').value.trim()||'Pemain';try{localStorage.setItem('trail_name',name)}catch(e){}net.send({t:'join',name});stat(connected,connected?'Bergabung…':'Menunggu layar host…')};
       return;
     }
@@ -1697,7 +1711,7 @@ const Phone=(()=>{
     let h='';
     const sensRows=`<div class="sens"><div>Mikrofon<em class="${micOK?'on':''}">${micOK?'Aktif':sensorsAsked?'Tidak tersedia, pakai tap':'Belum aktif'}</em></div><div>Sensor gerak<em class="${motionOK?'on':''}">${motionOK?'Aktif':sensorsAsked?'Goyangkan HP untuk tes':'Belum aktif'}</em></div></div>`;
     if(ph==='lobby'){
-      h=S.mode==='solo'?`<div><div class="k">Mode individu, warna pendakimu</div><h2 style="color:${t.color}">${esc(name)}</h2></div>${sensRows}`:`<div><div class="k">Kamu bergabung di</div><h2>${esc(t.name)}</h2></div>${sensRows}`;
+      h=(GG?'<img class="plogo" src="assets/yours-logo.png" alt="YOURS" onerror="this.remove()">':'')+(S.mode==='solo'?`<div><div class="k">Mode individu, ${GG?'warna karaktermu':'warna pendakimu'}</div><h2 style="color:${t.color}">${esc(name)}</h2></div>${sensRows}`:`<div><div class="k">Kamu bergabung di</div><h2>${esc(t.name)}</h2></div>${sensRows}`);
       if(!sensorsAsked)h+=`<button class="cta" id="sb">Aktifkan mic dan sensor</button>`;
       if(S.pick&&S.teams.length>1)h+=`<p>Mau pindah tim?</p><div class="tp">`+S.teams.map((x,i)=>`<button data-t="${i}" class="${i===me.team?'sel':''}" style="--tc:${x.color}"><i></i><span>${esc(x.name)}</span>${i===me.team?'✓':''}</button>`).join('')+`</div>`;
       h+=`<div class="wait"><i></i>Menunggu host memulai game</div>`;
