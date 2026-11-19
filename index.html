@@ -7,7 +7,7 @@
 <title>Trail Summit Challenge</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800&family=Saira:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800&family=Saira:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
@@ -254,7 +254,7 @@ input[type=color]{padding:3px;height:40px;cursor:pointer}
 .wait{display:flex;align-items:center;gap:10px;color:var(--mute);font-size:14px}
 .wait i{width:8px;height:8px;border-radius:50%;background:var(--gold);animation:pulse 1.2s infinite}
 #padw{position:relative;width:min(80vw,58vh);aspect-ratio:1;margin:0 auto;touch-action:none;user-select:none;-webkit-user-select:none}
-#padw svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
+#padw>svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
 #pad{position:absolute;inset:9%;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;
   background:radial-gradient(circle at 50% 30%,color-mix(in srgb,var(--c) 85%,#fff) 0%,var(--c) 55%,color-mix(in srgb,var(--c) 70%,#000) 100%);
   box-shadow:0 20px 50px rgba(0,0,0,.45),inset 0 -6px 18px rgba(0,0,0,.25);transition:transform .06s}
@@ -293,6 +293,123 @@ input[type=color]{padding:3px;height:40px;cursor:pointer}
 #pstat{padding:10px 20px 14px;font-size:12.5px;color:var(--mute);display:flex;gap:8px;align-items:center;justify-content:center}
 #pstat i{width:7px;height:7px;border-radius:50%;background:var(--mute)}
 #pstat.on i{background:var(--ok)}
+
+/* ---------- PHONE controller (game UI) ---------- */
+#phone{--pf:"Plus Jakarta Sans","Saira","Inter",system-ui,sans-serif;--pbg:#141418;--pcard:#24242B;--pcard2:#2D2D35;--pline:rgba(255,255,255,.07);--ptx:#FFFFFF;--psub:#9C9EAA;--plav:#7E819F;
+  font-family:var(--pf);background:var(--pbg);color:var(--ptx)}
+#phone *{font-family:inherit}
+#ptop{background:linear-gradient(160deg,#A5A7B2 0%,#7D7F8A 55%,#6A6C77 100%);border-radius:0 0 34px 34px;padding:max(18px,env(safe-area-inset-top)) 18px 18px;box-shadow:0 12px 30px rgba(0,0,0,.35);position:relative;overflow:hidden}
+#ptop::after{content:"";position:absolute;right:-60px;top:-80px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.22),transparent 65%);pointer-events:none}
+.xhead{display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.xav{width:46px;height:46px;border-radius:15px;background:linear-gradient(145deg,color-mix(in srgb,var(--c) 80%,#fff),var(--c));display:grid;place-items:center;color:#fff;box-shadow:0 6px 16px color-mix(in srgb,var(--c) 45%,transparent),inset 0 -3px 0 rgba(0,0,0,.18)}
+.xav svg{width:24px;height:24px}
+.xwho{flex:1;min-width:0}.xwho b{display:block;font-size:19px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em}.xwho span{font-size:12.5px;color:rgba(255,255,255,.78);font-weight:500}
+.xtimer{min-width:56px;height:46px;border-radius:15px;background:rgba(20,20,24,.28);display:grid;place-items:center;align-content:center;color:#fff;backdrop-filter:blur(6px)}
+.xtimer b{font-size:18px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}.xtimer small{font-size:10px;opacity:.75}
+.xstats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px;position:relative;z-index:1}
+.xstats div{display:grid;gap:2px}.xstats b{font-size:17px;font-weight:800;color:#fff;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.xstats span{font-size:11.5px;color:rgba(255,255,255,.72);font-weight:500}
+#phone #pbody{justify-content:flex-start;gap:16px;padding:20px 18px 24px;text-align:left}
+#phone #pstat{color:var(--psub);border-top:0;font-size:12px}
+#phone .plogo{height:26px;width:auto;align-self:flex-start;opacity:.95}
+.xsec{display:flex;align-items:center;gap:12px}
+.xsec>div{flex:1;min-width:0}
+.xn{width:36px;height:36px;border-radius:12px;background:var(--pcard2);display:grid;place-items:center;font-size:14px;font-weight:800;color:#fff;flex:none}
+.xk{display:block;font-size:13px;color:var(--psub);font-weight:500}
+.xh2{font-size:30px;font-weight:800;line-height:1.05;letter-spacing:-.02em;margin:2px 0 0;color:#fff}
+.xh{font-size:32px;font-weight:800;line-height:1.05;letter-spacing:-.02em;margin:6px 0 0;color:#fff}
+.xp{font-size:14.5px;color:var(--psub);line-height:1.55;margin:0}
+.xsq{width:46px;height:46px;border-radius:15px;background:var(--pcard2);display:grid;place-items:center;color:#fff;flex:none}.xsq svg{width:22px;height:22px}
+.xbtn{width:100%;border:0;border-radius:999px;background:#fff;color:#141418;font-weight:800;font-size:16px;padding:17px 20px;box-shadow:0 10px 24px rgba(0,0,0,.35),inset 0 -3px 0 rgba(0,0,0,.08);transition:transform .1s}
+.xbtn:active{transform:scale(.97)}.xbtn:disabled{opacity:.5}
+.xbtn.ghost{background:var(--pcard2);color:#fff;box-shadow:inset 0 0 0 1px var(--pline)}
+.xfield{display:flex;align-items:center;gap:12px;background:var(--pcard);border-radius:20px;padding:6px 8px 6px 16px;box-shadow:inset 0 0 0 1px var(--pline)}
+.xfield span{color:var(--psub);display:grid}.xfield svg{width:20px;height:20px}
+#phone .xfield input{background:transparent;border:0;color:#fff;font-size:18px;font-weight:600;padding:14px 4px;border-radius:0}
+#phone .xfield input::placeholder{color:#6E7080}
+.xlist{display:grid;gap:10px}
+.xrow{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:var(--pcard);color:#fff;border:0;border-radius:22px;padding:12px 12px 12px 12px;box-shadow:inset 0 0 0 1px var(--pline);font-weight:500;min-height:72px}
+button.xrow{cursor:pointer}button.xrow:active{transform:scale(.985)}
+.xtile{width:50px;height:50px;border-radius:16px;flex:none;display:grid;place-items:center;color:#fff;font-weight:800;font-size:18px;
+  background:color-mix(in srgb,var(--tc,#3A3A44) 22%,#1C1C22);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--tc,#55555F) 70%,transparent)}
+.xtile svg{width:26px;height:26px;color:color-mix(in srgb,var(--tc,#fff) 55%,#fff)}
+.xcols{flex:1;min-width:0;display:flex;gap:12px}
+.xcols>div{min-width:0;display:grid;gap:2px}.xcols>div:first-child{flex:1.3}
+.xcols span{font-size:11.5px;color:var(--psub);font-weight:500}.xcols b{font-size:16px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.xcols small{font-size:12px;color:var(--psub);font-weight:500;white-space:normal}
+.xgo{flex:none;align-self:stretch;display:grid;place-items:center;padding:0 16px;border-radius:16px;background:var(--plav);font-weight:700;font-size:14px;margin:-2px -2px -2px 0}
+.xrow.ex{box-shadow:inset 0 0 0 1.5px #FFB547}.xrow.ex .xcols>div:first-child span{color:#FFB547;font-weight:700}
+.xok{width:30px;height:30px;border-radius:50%;background:#1F9D6B;display:grid;place-items:center;color:#fff;flex:none}.xok svg{width:16px;height:16px}
+.xopt.sel{box-shadow:inset 0 0 0 2px var(--c)}.xopt.sel .xtile{background:var(--c);box-shadow:none}
+.xopt.ok{box-shadow:inset 0 0 0 2px #1F9D6B;background:color-mix(in srgb,#1F9D6B 18%,var(--pcard))}.xopt.ok .xtile{background:#1F9D6B;box-shadow:none}
+.xopt.no{box-shadow:inset 0 0 0 2px #E5484D;background:color-mix(in srgb,#E5484D 16%,var(--pcard))}
+.xopt:disabled{opacity:1}
+.xq{background:var(--pcard);border-radius:24px;padding:18px;font-size:18px;font-weight:700;line-height:1.4;box-shadow:inset 0 0 0 1px var(--pline)}
+.xverd{text-align:center;font-size:28px;font-weight:800}.xverd.ok{color:#2BD48C}.xverd.no{color:#FF6B70}
+.xcards{display:flex;gap:12px;overflow-x:auto;padding:4px 2px 10px;margin:0 -18px;padding-left:18px;padding-right:18px;scroll-snap-type:x mandatory;scrollbar-width:none}
+.xcards::-webkit-scrollbar{display:none}
+.xcard{flex:none;width:132px;height:168px;border-radius:26px;border:3px solid rgba(255,255,255,.92);background:linear-gradient(160deg,color-mix(in srgb,var(--k) 85%,#fff) 0%,var(--k) 60%,color-mix(in srgb,var(--k) 80%,#000) 100%);color:#fff;
+  display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;padding:14px;position:relative;text-align:left;scroll-snap-align:start;box-shadow:0 12px 26px color-mix(in srgb,var(--k) 35%,transparent)}
+.xcard.sel{transform:translateY(-4px);box-shadow:0 0 0 3px var(--pbg),0 0 0 5px #fff,0 16px 30px color-mix(in srgb,var(--k) 45%,transparent)}
+.xcard:not(.sel){opacity:.82}
+.xcards.one .xcard{width:100%;height:150px;opacity:1;transform:none}
+.xci{position:absolute;top:16px;left:50%;transform:translateX(-50%);width:62px;height:62px;border-radius:20px;border:2.5px solid rgba(255,255,255,.9);display:grid;place-items:center}
+.xcards.one .xci{left:auto;right:18px;transform:none}
+.xci svg{width:32px;height:32px}
+.xcard b{font-size:17px;font-weight:800;letter-spacing:-.01em;text-shadow:0 1px 6px rgba(0,0,0,.18)}.xcard small{font-size:12px;opacity:.85;font-weight:500}
+.xchk{position:absolute;top:10px;right:10px;width:26px;height:26px;border-radius:50%;background:#fff;color:#141418;display:grid;place-items:center}.xchk svg{width:15px;height:15px}
+.xwait{display:flex;align-items:center;gap:10px;color:var(--psub);font-size:14px;font-weight:500}
+.xwait i{width:9px;height:9px;border-radius:50%;background:var(--c);animation:pulse 1.2s infinite}
+.xnote{font-size:13.5px;color:var(--psub);background:var(--pcard);border-radius:16px;padding:12px 14px}.xnote.bad{color:#FF8A8E;box-shadow:inset 0 0 0 1px rgba(229,72,77,.5)}
+.xsteps{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.xsteps div{display:grid;justify-items:center;gap:5px;color:var(--psub)}
+.xsteps span{width:42px;height:42px;border-radius:14px;background:var(--pcard);display:grid;place-items:center;box-shadow:inset 0 0 0 1px var(--pline)}
+.xsteps svg{width:20px;height:20px}.xsteps small{font-size:10.5px;font-weight:600}
+.xsteps .done span{background:#1F9D6B;color:#fff;box-shadow:none}.xsteps .done{color:#9FE3C4}
+.xsteps .cur span{background:#fff;color:#141418;box-shadow:0 6px 16px rgba(0,0,0,.35)}.xsteps .cur{color:#fff}
+.xticket{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,color-mix(in srgb,var(--tc) 26%,#202027),#202027 70%);border-radius:24px;padding:14px;box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--tc) 55%,transparent);position:relative}
+.xticket.ex{box-shadow:inset 0 0 0 2px #FFB547}
+.xex{position:absolute;top:-8px;right:12px;width:28px;height:28px;border-radius:50%;background:#FFB547;color:#141418;display:grid;place-items:center}.xex svg{width:16px;height:16px}
+.xwalk{display:grid;gap:12px;margin-top:6px}
+.xbar{height:10px;border-radius:6px;background:var(--pcard2);overflow:hidden}.xbar i{display:block;height:100%;background:var(--c);border-radius:6px;transition:width .1s}
+.xpick{display:grid;gap:10px;grid-template-columns:repeat(3,1fr)}.xpick.n4{grid-template-columns:repeat(2,1fr)}
+.xpick button{border:3px solid rgba(255,255,255,.9);border-radius:22px;background:linear-gradient(160deg,color-mix(in srgb,var(--k) 82%,#fff) 0%,var(--k) 65%,color-mix(in srgb,var(--k) 78%,#000) 100%);color:#fff;
+  display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;gap:1px;padding:10px;min-height:118px;position:relative;text-align:left;box-shadow:0 10px 20px color-mix(in srgb,var(--k) 30%,transparent)}
+.xpick.n4 button{min-height:132px}
+.xpick button.lt{color:#141418;border-color:#fff}.xpick button.lt .xpi{border-color:rgba(20,20,24,.35)}
+.xpi{position:absolute;top:10px;left:10px;right:10px;height:46px;border-radius:14px;border:2px solid rgba(255,255,255,.75);display:grid;place-items:center}
+.xpi svg{width:48px;height:30px}
+.xpick b{font-size:15px;font-weight:800;line-height:1.1}.xpick small{font-size:11.5px;opacity:.85;font-weight:600}
+.xpick button:active{transform:scale(.96)}.xpick button:disabled{opacity:.6}
+.xgauge{position:relative;width:min(68vw,250px);aspect-ratio:1;margin:4px auto}
+.xgauge svg{width:100%;height:100%;transform:rotate(-90deg)}
+.xgauge circle{fill:none;stroke-width:10}.xgauge .t{stroke:var(--pcard2)}.xgauge .v{stroke:var(--c);stroke-linecap:round;stroke-dasharray:327;transition:stroke-dashoffset .12s}
+.xgauge>div{position:absolute;inset:18%;border-radius:50%;background:var(--pcard);display:grid;place-items:center;align-content:center;gap:2px;box-shadow:inset 0 0 0 1px var(--pline)}
+.xgi{color:var(--psub)}.xgi svg{width:28px;height:28px}.xgauge b{font-size:36px;font-weight:800;line-height:1}.xgauge small{font-size:12px;color:var(--psub)}
+.xbig{display:grid;gap:14px;justify-items:center}
+.xbig button{width:min(62vw,220px);aspect-ratio:1;border:0;border-radius:44px;background:#fff;color:#141418;display:grid;place-items:center;align-content:center;gap:4px;box-shadow:0 0 0 10px var(--pcard),0 18px 40px rgba(0,0,0,.45),inset 0 -6px 0 rgba(0,0,0,.08);transition:transform .07s}
+.xbig button.hit,.xbig button:active{transform:scale(.94)}.xbig svg{width:40px;height:40px}.xbig b{font-size:24px;font-weight:800}.xbig small{font-size:13px;color:#6E7080;font-weight:600}
+.xbig .xbar{width:100%}
+.xhero{position:relative;text-align:center;display:grid;justify-items:center;gap:6px;padding:26px 6px 8px;overflow:hidden;border-radius:30px;background:radial-gradient(120% 80% at 50% 30%,#26262E 0%,#141418 70%)}
+.xrays{position:absolute;left:50%;top:92px;width:640px;height:640px;margin:-320px 0 0 -320px;border-radius:50%;background:repeating-conic-gradient(from 0deg,rgba(255,255,255,.07) 0deg 4deg,transparent 4deg 15deg);-webkit-mask:radial-gradient(circle,#000 0 28%,transparent 62%);mask:radial-gradient(circle,#000 0 28%,transparent 62%);animation:xspin 40s linear infinite;pointer-events:none}
+@keyframes xspin{to{transform:rotate(360deg)}}
+.xstars{display:flex;gap:6px;align-items:flex-end;position:relative;color:#5C5E6B}.xstars i{width:24px;height:24px;display:block}.xstars i:nth-child(2){width:34px;height:34px;color:#6E7080}
+.xhero.win .xstars,.xhero.ok .xstars{color:#FFB547}.xhero.win .xstars i:nth-child(2),.xhero.ok .xstars i:nth-child(2){color:#FFD27A}
+.xbadge{position:relative;width:118px;height:118px;margin:6px 0 4px;display:grid;place-items:center;color:#fff;
+  background:linear-gradient(150deg,color-mix(in srgb,var(--c) 75%,#fff),var(--c) 55%,color-mix(in srgb,var(--c) 70%,#000));clip-path:polygon(50% 0,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%);filter:drop-shadow(0 14px 22px rgba(0,0,0,.5))}
+.xbadge svg{width:52px;height:52px}
+.xhero.ok .xbadge{--c:#1F9D6B}.xhero.bad .xbadge{--c:#E5484D}
+.xhero .xk{position:relative}.xhero .xh{position:relative;font-size:34px}.xhero .xp{position:relative;max-width:30ch}
+.xchips{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;margin-top:10px}
+.xchips div{background:var(--pcard);border-radius:18px;padding:12px 6px;display:grid;gap:2px;box-shadow:inset 0 0 0 1px var(--pline)}.xchips b{font-size:20px;font-weight:800}.xchips span{font-size:11.5px;color:var(--psub)}
+.xhero .xbtn{position:relative;margin-top:14px;width:auto;padding:15px 30px}
+.xcount{position:relative;margin-top:14px;width:120px;height:120px;border-radius:50%;background:#fff;color:#141418;display:grid;place-items:center;align-content:center;box-shadow:0 0 0 10px var(--pcard),0 18px 40px rgba(0,0,0,.45)}
+.xcount b{font-size:48px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}.xcount small{font-size:12px;color:#6E7080;font-weight:600}
+#phone #padw{width:min(80vw,52vh)}
+#phone #pad{background:radial-gradient(circle at 50% 28%,color-mix(in srgb,var(--c) 70%,#fff) 0%,var(--c) 52%,color-mix(in srgb,var(--c) 65%,#000) 100%);box-shadow:0 0 0 10px var(--pcard),0 22px 50px rgba(0,0,0,.5),inset 0 -8px 20px rgba(0,0,0,.25);gap:2px}
+#phone #pad b{font-family:var(--pf);font-weight:800;font-size:44px;letter-spacing:-.02em}
+#phone #pad small{font-size:13px}
+.xpadi{color:#fff;opacity:.9;display:grid}.xpadi svg{width:42px;height:42px;position:static;transform:none}
+#phone #pbody>*{flex:none}
+.xhero{width:100%;box-sizing:border-box}
 </style>
 </head>
 <body>
@@ -343,7 +460,7 @@ input[type=color]{padding:3px;height:40px;cursor:pointer}
 <div id="admin" class="screen hide"></div>
 
 <div id="phone" class="screen hide">
-  <div id="phead"><div class="me"><b id="pname"></b><span id="pteam">Menghubungkan</span></div><div class="st" id="pst"></div></div>
+  <div id="ptop"><div class="xhead"><div class="xav" id="pav"></div><div class="xwho"><b id="pname"></b><span id="pteam">Menghubungkan</span></div><div class="xtimer hide" id="ptim"><b data-tm></b><small>dtk</small></div></div><div class="xstats" id="pstats"></div></div>
   <div id="pbody"></div>
   <div id="pstat"><i></i><span id="pstt">Menghubungkan…</span></div>
 </div>
@@ -1580,7 +1697,7 @@ const Phone=(()=>{
   const later=ms=>setTimeout(()=>{lastKey='';draw()},ms+40);
   const RING=2*Math.PI*46;
   function init(r){
-    if(inited)return;inited=true;room=r;document.title=gtitle;if(QS.get('g'))document.body.classList.add('light');
+    if(inited)return;inited=true;room=r;document.title=gtitle;
     try{pid=localStorage.getItem('trail_pid');name=localStorage.getItem('trail_name')||''}catch(e){}
     if(!pid){pid='p'+Math.random().toString(36).slice(2,10);try{localStorage.setItem('trail_pid',pid)}catch(e){}}
     if(QS.get('pid'))pid=QS.get('pid');
@@ -1592,7 +1709,7 @@ const Phone=(()=>{
   function stat(ok,t){$('pstat').classList.toggle('on',!!ok);$('pstt').textContent=t}
   function onMsg(m){
     if(m.t==='me'){me=m;stat(true,'Terhubung ke room '+room);draw()}
-    else if(m.t==='s'){S=m;document.body.classList.toggle('light',m.game==='gudang');if(m.title&&m.title!==gtitle){gtitle=m.title;document.title=gtitle;if(!me)lastKey=''}endAt=performance.now()+m.left;if(m.phase==='q'&&m.q&&m.q.i!==ansQ){myAns=null;ansQ=m.q.i}if(m.phase==='intro'||m.phase==='lobby'){ansQ=-1;myAns=null}draw()}
+    else if(m.t==='s'){S=m;if(m.title&&m.title!==gtitle){gtitle=m.title;document.title=gtitle;if(!me)lastKey=''}endAt=performance.now()+m.left;if(m.phase==='q'&&m.q&&m.q.i!==ansQ){myAns=null;ansQ=m.q.i}if(m.phase==='intro'||m.phase==='lobby'){ansQ=-1;myAns=null}draw()}
     else if(m.t==='st'&&S){m.teams.forEach((t,i)=>{if(S.teams[i]){S.teams[i].f=t.f;S.teams[i].r=t.r;S.teams[i].sc=t.sc}});head()}
     else if(m.t==='ord'){GO=m.list||[];if(!J)draw()}
     else if(m.t==='job'){const prev=J&&J.step,now=performance.now();J=m.job;
@@ -1602,7 +1719,7 @@ const Phone=(()=>{
       if(m.taken){toastUntil=now+1800;later(1800)}
       lastKey='';draw()}
     else if(m.t==='who'){if(name)net.send({t:'join',name})}
-    else if(m.t==='full'){$('pbody').innerHTML='<h2>Room penuh</h2><p>Room ini sudah berisi 50 pemain, batas maksimal.</p>'}
+    else if(m.t==='full'){$('pbody').innerHTML='<div class="xsec"><div><span class="xk">Tidak bisa bergabung</span><h2 class="xh2">Room penuh</h2></div></div><p class="xp">Room ini sudah berisi 50 pemain, batas maksimal.</p>'}
   }
   function mode(){
     if(!S||S.game==='gudang'||S.phase!=='play'||!S.round)return null;
@@ -1620,13 +1737,14 @@ const Phone=(()=>{
       else if(md==='shake')v=shakeV;
       net.send({t:'v',v:+v.toFixed(2)});
     }else v=0;
-    const pt=$('ptimer');if(pt)pt.textContent=Math.max(0,Math.ceil((endAt-performance.now())/1000));
+    const secs=Math.max(0,Math.ceil((endAt-performance.now())/1000));document.querySelectorAll('[data-tm]').forEach(e=>e.textContent=secs);
+    if(S&&S.game==='gudang'&&performance.now()<lockUntil){const h1=document.querySelector('#pbody .xhero.bad .xh');if(h1)h1.textContent='Tunggu '+Math.max(1,Math.ceil((lockUntil-performance.now())/1000))+' detik'}
   }
   function meter(){
     if(an){an.getFloatTimeDomainData(buf);let s=0;for(let i=0;i<buf.length;i++)s+=buf[i]*buf[i];
       const db=20*Math.log10(Math.sqrt(s/buf.length)+1e-7);
       const t=clamp((db+42)/34*((S&&S.sens.mic)||1));micV+=(t-micV)*(t>micV?.5:.12)}
-    if(S&&S.game==='gudang'&&J&&J.step===3&&performance.now()>=J.readyAt&&!pdiSent&&motionOK&&shakeV>.15){pdi=Math.min(1,pdi+shakeV*.035);const bar=$('pdiBar');if(bar)bar.style.width=pdi*100+'%';if(pdi>=1){pdiSent=true;net.send({t:'act',step:3,ok:1})}}
+    if(S&&S.game==='gudang'&&J&&J.step===3&&performance.now()>=J.readyAt&&!pdiSent&&motionOK&&shakeV>.15){pdi=Math.min(1,pdi+shakeV*.035);pdiUI();if(pdi>=1){pdiSent=true;net.send({t:'act',step:3,ok:1})}}
     shakeV*=.94;
     const md=mode(),ring=$('ring');
     if(ring){const now=performance.now();const live=md==='tap'?clamp(taps.filter(x=>now-x<1000).length/((S&&S.sens.tap)||8)):md==='shout'?micV:shakeV;ring.style.strokeDashoffset=RING*(1-live)}
@@ -1653,53 +1771,83 @@ const Phone=(()=>{
     }catch(e){micOK=false}
     lastKey='';draw();
   }
+  /* ---------- controller UI (game-style) ---------- */
+  const SV=(d,extra)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ${extra||''}>${d}</svg>`;
+  const IC={
+    mount:SV('<path d="M2.5 19.5 9 8.5l4 6.2 2.2-3.2 6.3 8z"/><path d="M7.2 11.6 9 13l1.6-1.4"/>'),
+    box:SV('<path d="M3 7.5 12 3l9 4.5-9 4.5z"/><path d="M3 7.5v9L12 21l9-4.5v-9"/><path d="M12 12v9"/><path d="m7.5 5.2 9 4.6"/>'),
+    bike:SV('<circle cx="5.5" cy="16.5" r="3"/><circle cx="18.5" cy="16.5" r="3"/><path d="M5.5 16.5 9 10h5l2.5 6.5"/><path d="m14 10 1.5-3H18"/><path d="M8 10h3"/>'),
+    truck:SV('<path d="M2.5 6h11v10h-11z"/><path d="M13.5 9.5h4l3 3.5v3h-7z"/><circle cx="6.5" cy="17.5" r="2"/><circle cx="17" cy="17.5" r="2"/>'),
+    mic:SV('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/>'),
+    shake:SV('<rect x="7.5" y="3" width="9" height="18" rx="2.2"/><path d="M3.5 8.5 2 12l1.5 3.5M20.5 8.5 22 12l-1.5 3.5"/>'),
+    check:SV('<path d="m5 12.5 4.5 4.5L19 7.5"/>','stroke-width="2.6"'),
+    pin:SV('<path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>'),
+    bolt:SV('<path d="M13 2.5 4.5 13.5H11l-1 8 8.5-11H12z"/>'),
+    clip:SV('<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M8.5 10h7M8.5 14h7M8.5 18h4"/>'),
+    wrench:SV('<path d="M14.5 3.5a5 5 0 0 0-5.7 6.9L3.5 15.7a2 2 0 0 0 2.8 2.8l5.3-5.3a5 5 0 0 0 6.9-5.7l-3 3-2.6-.6-.6-2.6z"/>'),
+    tape:SV('<circle cx="10" cy="12" r="6.5"/><circle cx="10" cy="12" r="2.5"/><path d="M16.5 12H22"/>'),
+    flag:SV('<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>'),
+    users:SV('<circle cx="9" cy="8.5" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 5.5a3.5 3.5 0 0 1 0 6.5M18 14.5a6 6 0 0 1 3.5 5.5"/>'),
+    star:`<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg>`,
+    trophy:SV('<path d="M7.5 4h9v5a4.5 4.5 0 0 1-9 0z"/><path d="M7.5 6H4v1.5A3.5 3.5 0 0 0 7.6 11M16.5 6H20v1.5a3.5 3.5 0 0 1-3.6 3.5M12 13.5V17M8.5 20.5h7M9.5 17h5v3.5h-5z"/>')
+  };
+  const gameIc=()=>S&&S.game==='gudang'?IC.box:IC.mount;
+  const lumP=h=>{const n=parseInt(String(h).slice(1),16);return(.299*(n>>16&255)+.587*(n>>8&255)+.114*(n&255))/255};
   function head(){
-    const t=me&&S&&S.teams[me.team];
-    $('pname').textContent=name||gtitle;
-    if(t){
-      $('phone').style.setProperty('--c',t.color);
-      $('pteam').textContent=S.mode==='solo'?'Main individu':t.name;
-      $('pst').innerHTML=S.phase!=='lobby'?(S.game==='gudang'?`<b>P${t.r}</b><span>${t.sc||0} poin</span>`:`<b>P${t.r}</b><span>${Math.round(t.f*100)}% ke puncak</span>`):'';
-    }
+    const t=me&&S&&S.teams[me.team],GG=S&&S.game==='gudang';
+    const av=$('pav');
+    $('phone').style.setProperty('--c',t?t.color:'#7E819F');
+    av.innerHTML=gameIc();
+    $('pname').textContent=me?name:gtitle;
+    $('pteam').textContent=!me?'Room '+room:!t?'Menghubungkan':S.mode==='solo'?'Main individu':t.name;
+    const tm=$('ptim');const timed=S&&['intro','play','q'].includes(S.phase);tm.classList.toggle('hide',!timed);
+    const st=$('pstats');
+    if(!me||!S||!t){st.innerHTML=`<div><b>${esc(room)}</b><span>Kode room</span></div><div><b>${GG||QS.get('g')?'Gudang':'Pendakian'}</b><span>Game</span></div><div><b>${connected?'Online':'...'}</b><span>Status</span></div>`;return}
+    const ph=S.phase;
+    if(ph==='lobby')st.innerHTML=`<div><b>${S.mode==='solo'?'Individu':'Tim'}</b><span>Mode</span></div><div><b>${S.teams.length}</b><span>${S.mode==='solo'?'Pemain':'Tim'}</span></div><div><b>${motionOK||micOK?'Siap':'Belum'}</b><span>Sensor</span></div>`;
+    else st.innerHTML=`<div><b>P${t.r||'-'}</b><span>Posisi</span></div><div><b>${GG?(t.sc||0):Math.round((t.f||0)*100)+'%'}</b><span>${GG?'Poin':'Ke puncak'}</span></div><div><b>${Math.min(S.ri+1,S.n)}/${S.n}</b><span>${GG?'Shift':'Ronde'}</span></div>`;
   }
   const BIKE=h=>`<svg viewBox="0 0 48 30" aria-hidden="true"><circle cx="11" cy="22" r="7" fill="#1E2128"/><circle cx="37" cy="22" r="7" fill="#1E2128"/><circle cx="11" cy="22" r="2.5" fill="#8E96A3"/><circle cx="37" cy="22" r="2.5" fill="#8E96A3"/><path d="M5 15 L17 10 L29 10 L35 3 L40 5 L38 14 L27 19 L13 19Z" fill="${h}" stroke="rgba(24,33,47,.35)" stroke-width="1" stroke-linejoin="round"/><path d="M7 12 L21 9 L22 12 L9 15Z" fill="#22252C"/></svg>`;
+  const sec=(k,t,n,ic)=>`<div class="xsec">${n!=null?`<span class="xn">${n}</span>`:''}<div><span class="xk">${k}</span><h2 class="xh2">${t}</h2></div>${ic?`<span class="xsq">${ic}</span>`:''}</div>`;
+  const hero=(o)=>`<div class="xhero ${o.cls||''}"><div class="xrays"></div>${o.stars?`<div class="xstars"><i>${IC.star}</i><i>${IC.star}</i><i>${IC.star}</i></div>`:''}<div class="xbadge" style="${o.col?'--c:'+o.col:''}">${o.ic||gameIc()}</div>${o.k?`<div class="xk">${o.k}</div>`:''}<h1 class="xh">${o.t}</h1>${o.p?`<p class="xp">${o.p}</p>`:''}${o.chips?`<div class="xchips">${o.chips.map(c=>`<div><b>${c[0]}</b><span>${c[1]}</span></div>`).join('')}</div>`:''}${o.btn||''}</div>`;
+  const row=(o)=>`<${o.tag||'div'} class="xrow ${o.cls||''}" ${o.attr||''}><span class="xtile" style="${o.tc?'--tc:'+o.tc:''}">${o.ic}</span><div class="xcols">${o.cols.map(c=>`<div><span>${c[0]}</span><b>${c[1]}</b></div>`).join('')}</div>${o.right||''}</${o.tag||'div'}>`;
   function gPlay(){
-    const now=performance.now(),steps=['Pesanan','Unit','PDI','Packing','Kirim'];
-    if(now<doneUntil)return`<div class="ctr" style="display:grid;gap:10px"><div class="k">Pesanan terkirim</div><div class="big" style="color:var(--ok)">+${doneG}</div><p>Mantap. Ambil pesanan berikutnya.</p></div>`;
-    if(now<lockUntil)return`<div class="ctr" style="display:grid;gap:10px"><div class="verdict no">Salah!</div><p>Tunggu ${Math.round(lockMs/1000)} detik, lalu coba lagi.</p></div>`;
-    const timer=`<div class="gtop"><span id="ptimer"></span><span>detik tersisa</span></div>`;
+    const now=performance.now(),steps=[['Pesanan',IC.clip],['Unit',IC.bike],['PDI',IC.wrench],['Packing',IC.tape],['Kirim',IC.truck]];
+    if(now<doneUntil)return hero({cls:'ok',stars:1,ic:IC.truck,k:'Pesanan terkirim',t:'+'+doneG+' poin',p:'Mantap, unit sudah di truk. Ambil pesanan berikutnya.',btn:`<button class="xbtn" id="gnext">Ambil pesanan lagi</button>`});
+    if(now<lockUntil)return hero({cls:'bad',ic:IC.wrench,col:'#E5484D',k:'Langkah salah',t:'Tunggu '+Math.max(1,Math.ceil((lockUntil-now)/1000))+' detik',p:'Cek lagi detail pesanannya, lalu coba lagi.'});
     if(!J){
-      const list=GO.slice(0,4);
-      return timer+`<div><div class="k">Pilih pesanan</div><h2 style="font-size:34px">Siapa cepat dia dapat</h2></div>`+(now<toastUntil?'<p style="color:var(--bad)">Pesanan itu sudah diambil orang lain.</p>':'')+
-        (list.length?`<div class="gl2">`+list.map(o=>`<button class="gord ${o.ex?'ex':''}" data-o="${o.id}"><i style="background:${o.h}"></i><span><b>${esc(o.m)}</b><small>${esc(o.c)} ke ${esc(o.city)}</small></span><em>${o.ex?'Ekspres ':''}${o.pts}</em></button>`).join('')+`</div>`:'<div class="wait"><i></i>Menunggu pesanan baru</div>');
+      const list=GO.slice(0,5);
+      return sec('Tersedia','Pesanan',GO.length,IC.box)+(now<toastUntil?'<div class="xnote bad">Pesanan itu sudah diambil orang lain.</div>':'')+
+        (list.length?`<div class="xlist">`+list.map(o=>row({tag:'button',cls:o.ex?'ex':'',attr:`data-o="${o.id}"`,tc:o.h,ic:IC.bike,cols:[[o.ex?'Ekspres':'Unit',esc(o.m)],['Tujuan',esc(o.city)],['Poin',o.pts]],right:`<span class="xgo">Ambil</span>`})).join('')+`</div>`:'<div class="xwait"><i></i>Menunggu pesanan baru</div>');
     }
     const o=J.o,ready=now>=J.readyAt;
-    let h=timer+`<div class="gsteps">`+steps.map((n,i)=>`<span class="${i+1<J.step?'done':i+1===J.step?'cur':''}">${n}</span>`).join('')+`</div>`+
-      `<div class="gcard ${o.ex?'ex':''}"><i style="background:${o.h}"></i><span><b>${esc(o.m)}</b><small>Warna ${esc(o.c)}, kirim ke ${esc(o.city)}</small></span><em>${o.ex?'Ekspres ':''}${o.pts}</em></div>`;
-    if(!ready)return h+`<div class="wait"><i></i>Menuju ${esc(J.st)}</div><div class="prog"><i class="gwalk" style="animation-duration:${Math.max(.2,(J.readyAt-now)/1000)}s"></i></div>`;
-    if(J.step===1)h+=`<p>Cek detail pesanan di atas, lalu proses.</p><button class="cta" id="gok">Proses pesanan</button>`;
-    else if(J.step===2)h+=`<p>Ambil unit yang sesuai pesanan dari rak.</p><div class="gu" style="grid-template-columns:repeat(${J.opts.length===4?2:3},1fr)">`+J.opts.map((u,i)=>`<button data-c="${i}">${BIKE(u.h)}<b>${esc(u.m)}</b><small>${esc(u.c)}</small></button>`).join('')+`</div>`;
-    else if(J.step===3)h+=`<p>${motionOK?'Goyangkan HP untuk cek mesin sampai penuh.':'Tap tombol di bawah untuk cek mesin sampai penuh.'}</p><div class="prog big2"><i id="pdiBar" style="width:${pdi*100}%"></i></div><button class="cta" id="pdiTap">${motionOK?'Atau tap di sini':'Cek mesin'}</button>`;
-    else if(J.step===4&&sub4===0)h+=`<p>Bungkus unit: tap terus sampai penuh.</p><div class="prog big2"><i id="wrapBar" style="width:${wraps/8*100}%"></i></div><button class="cta" id="wrap">Bungkus</button>`;
-    else if(J.step===4)h+=`<p>Tempel label kota tujuan yang benar.</p><div class="po">`+J.opts.map(c=>`<button data-c="${esc(c)}"><i>⌂</i>${esc(c)}</button>`).join('')+`</div>`;
-    else if(J.step===5)h+=`<p>Muat ke truk wilayah yang benar.</p><div class="po">`+J.opts.map((r,i)=>`<button data-c="${i}"><i>${i+1}</i><span><b>Truk ${esc(r.n)}</b><br><small style="color:var(--mute)">${esc(r.c.join(', '))}</small></span></button>`).join('')+`</div>`;
+    let h=`<div class="xsteps">`+steps.map((s,i)=>`<div class="${i+1<J.step?'done':i+1===J.step?'cur':''}"><span>${i+1<J.step?IC.check:s[1]}</span><small>${s[0]}</small></div>`).join('')+`</div>`+
+      `<div class="xticket ${o.ex?'ex':''}" style="--tc:${o.h}"><span class="xtile">${IC.bike}</span><div class="xcols"><div><span>Unit</span><b>${esc(o.m)}</b></div><div><span>Warna</span><b>${esc(o.c)}</b></div><div><span>Tujuan</span><b>${esc(o.city)}</b></div></div>${o.ex?`<span class="xex">${IC.bolt}</span>`:''}</div>`;
+    if(!ready)return h+`<div class="xwalk"><div class="xwait"><i></i>Menuju ${esc(J.st)}</div><div class="xbar"><i class="gwalk" style="animation-duration:${Math.max(.2,(J.readyAt-now)/1000)}s"></i></div></div>`;
+    if(J.step===1)h+=sec('Langkah 1','Konfirmasi pesanan')+`<p class="xp">Pastikan unit, warna, dan kota tujuan sudah benar.</p><button class="xbtn" id="gok">Proses pesanan</button>`;
+    else if(J.step===2)h+=sec('Langkah 2','Ambil unit')+`<div class="xpick n${J.opts.length}">`+J.opts.map((u,i)=>`<button data-c="${i}" class="${lumP(u.h)>.75?'lt':''}" style="--k:${u.h}"><span class="xpi">${BIKE('#ffffff')}</span><b>${esc(u.m)}</b><small>${esc(u.c)}</small></button>`).join('')+`</div>`;
+    else if(J.step===3)h+=sec('Langkah 3','Cek PDI mesin')+`<div class="xgauge"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" class="t"/><circle id="pdiRing" cx="60" cy="60" r="52" class="v" style="stroke-dashoffset:${327*(1-pdi)}"/></svg><div><span class="xgi">${motionOK?IC.shake:IC.wrench}</span><b id="pdiPct">${Math.round(pdi*100)}%</b><small>${motionOK?'Goyangkan HP':'Tap tombol'}</small></div></div><button class="xbtn" id="pdiTap">${motionOK?'Atau tap di sini':'Cek mesin'}</button>`;
+    else if(J.step===4&&sub4===0)h+=sec('Langkah 4','Bungkus unit')+`<div class="xbig"><button id="wrap"><span>${IC.tape}</span><b>Bungkus</b><small id="wrapCnt">${wraps}/8</small></button><div class="xbar"><i id="wrapBar" style="width:${wraps/8*100}%"></i></div></div>`;
+    else if(J.step===4)h+=sec('Langkah 4','Tempel label tujuan')+`<div class="xlist">`+J.opts.map(c=>row({tag:'button',attr:`data-c="${esc(c)}"`,ic:IC.pin,cols:[['Kota tujuan',esc(c)]],right:`<span class="xgo">Tempel</span>`})).join('')+`</div>`;
+    else if(J.step===5)h+=sec('Langkah 5','Muat ke truk')+`<div class="xlist">`+J.opts.map((r,i)=>row({tag:'button',attr:`data-c="${i}"`,ic:IC.truck,cols:[['Truk '+esc(r.n),`<small>${esc(r.c.join(', '))}</small>`]],right:`<span class="xgo">Muat</span>`})).join('')+`</div>`;
     return h;
   }
   function gBind(B){
     B.querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>{b.disabled=true;net.send({t:'take',oid:+b.dataset.o})});
     const act=m=>{if(!J)return;net.send(Object.assign({t:'act',step:J.step},m))};
     const ok=$('gok');if(ok)ok.onclick=()=>{ok.disabled=true;act({ok:1})};
+    const nx=$('gnext');if(nx)nx.onclick=()=>{doneUntil=0;lastKey='';draw()};
     B.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{B.querySelectorAll('[data-c]').forEach(x=>x.disabled=true);const v=b.dataset.c;act({choice:J.step===4?v:+v})});
-    const pt=$('pdiTap');if(pt)pt.onclick=()=>{pdi=Math.min(1,pdi+(motionOK?.08:.1));const bar=$('pdiBar');if(bar)bar.style.width=pdi*100+'%';if(pdi>=1&&!pdiSent){pdiSent=true;act({ok:1})}};
-    const wr=$('wrap');if(wr)wr.onclick=()=>{wraps++;const bar=$('wrapBar');if(bar)bar.style.width=Math.min(100,wraps/8*100)+'%';if(wraps>=8){sub4=1;lastKey='';draw()}};
-    const sb=$('sb');if(sb)sb.onclick=sensors;
+    const pt=$('pdiTap');if(pt)pt.onclick=()=>{pdi=Math.min(1,pdi+(motionOK?.08:.1));pdiUI();if(pdi>=1&&!pdiSent){pdiSent=true;act({ok:1})}};
+    const wr=$('wrap');if(wr)wr.onclick=()=>{wraps++;const bar=$('wrapBar');if(bar)bar.style.width=Math.min(100,wraps/8*100)+'%';const wc=$('wrapCnt');if(wc)wc.textContent=Math.min(8,wraps)+'/8';wr.classList.add('hit');setTimeout(()=>wr.classList.remove('hit'),70);if(wraps>=8){sub4=1;lastKey='';draw()}};
   }
+  function pdiUI(){const r=$('pdiRing');if(r)r.style.strokeDashoffset=327*(1-pdi);const pc=$('pdiPct');if(pc)pc.textContent=Math.round(pdi*100)+'%'}
   function draw(){
     head();
     const B=$('pbody');
     if(!me){
       if(lastKey==='join')return;lastKey='join';
-      B.innerHTML=`${QS.get('g')?'<img class="plogo" src="assets/yours-logo.png" alt="YOURS" onerror="this.remove()">':''}<div class="k">Room ${esc(room)}</div><h2>${esc(gtitle)}</h2><p>Isi nama yang akan tampil di layar utama.</p><input id="nm" maxlength="16" placeholder="Nama kamu" value="${esc(name)}" autocomplete="nickname"><button class="cta" id="jb">Gabung</button>`;
+      B.innerHTML=`${QS.get('g')?'<img class="plogo" src="assets/yours-logo-white.png" alt="YOURS" onerror="this.remove()">':''}${sec('Room '+esc(room),esc(gtitle))}<p class="xp">Isi nama yang akan tampil di layar utama.</p><div class="xfield"><span>${IC.users}</span><input id="nm" maxlength="16" placeholder="Nama kamu" value="${esc(name)}" autocomplete="nickname"></div><button class="xbtn" id="jb">Gabung</button>`;
       $('jb').onclick=()=>{name=$('nm').value.trim()||'Pemain';try{localStorage.setItem('trail_name',name)}catch(e){}net.send({t:'join',name});stat(connected,connected?'Bergabung…':'Menunggu layar host…')};
       return;
     }
@@ -1709,36 +1857,37 @@ const Phone=(()=>{
     const key=[ph,S.ri,S.q&&S.q.i,md,me.team,myAns,sensorsAsked,micOK,motionOK,ph==='lobby'?S.teams.map(x=>x.name+x.color).join():'',GG&&ph==='play'?[J&&J.step,J&&nowk>=J.readyAt,sub4,nowk<lockUntil,nowk<doneUntil,nowk<toastUntil,J?'':GO.map(o=>o.id).join()].join(','):''].join('|');
     if(key===lastKey)return;lastKey=key;
     let h='';
-    const sensRows=`<div class="sens"><div>Mikrofon<em class="${micOK?'on':''}">${micOK?'Aktif':sensorsAsked?'Tidak tersedia, pakai tap':'Belum aktif'}</em></div><div>Sensor gerak<em class="${motionOK?'on':''}">${motionOK?'Aktif':sensorsAsked?'Goyangkan HP untuk tes':'Belum aktif'}</em></div></div>`;
+    const sensRows=`<div class="xlist">`+row({ic:IC.mic,tc:micOK?'#1F9D6B':'#3A3A44',cols:[['Mikrofon',micOK?'Aktif':sensorsAsked?'Tidak tersedia':'Belum aktif']],right:micOK?`<span class="xok">${IC.check}</span>`:''})+row({ic:IC.shake,tc:motionOK?'#1F9D6B':'#3A3A44',cols:[['Sensor gerak',motionOK?'Aktif':sensorsAsked?'Goyangkan untuk tes':'Belum aktif']],right:motionOK?`<span class="xok">${IC.check}</span>`:''})+`</div>`;
     if(ph==='lobby'){
-      h=(GG?'<img class="plogo" src="assets/yours-logo.png" alt="YOURS" onerror="this.remove()">':'')+(S.mode==='solo'?`<div><div class="k">Mode individu, ${GG?'warna karaktermu':'warna pendakimu'}</div><h2 style="color:${t.color}">${esc(name)}</h2></div>${sensRows}`:`<div><div class="k">Kamu bergabung di</div><h2>${esc(t.name)}</h2></div>${sensRows}`);
-      if(!sensorsAsked)h+=`<button class="cta" id="sb">Aktifkan mic dan sensor</button>`;
-      if(S.pick&&S.teams.length>1)h+=`<p>Mau pindah tim?</p><div class="tp">`+S.teams.map((x,i)=>`<button data-t="${i}" class="${i===me.team?'sel':''}" style="--tc:${x.color}"><i></i><span>${esc(x.name)}</span>${i===me.team?'✓':''}</button>`).join('')+`</div>`;
-      h+=`<div class="wait"><i></i>Menunggu host memulai game</div>`;
-    }else if(ph==='intro'&&GG){
-      h=`<div><div class="k">Shift ${S.ri+1} dari ${S.n}</div><h2>${esc(S.round.title)}</h2></div><p>Ambil pesanan, lalu kerjakan 5 langkah: konfirmasi, ambil unit, cek PDI, packing, dan kirim. Salah langkah kena tunda sebentar.</p><div class="big" id="ptimer"></div>`;
-      if(!motionOK)h+=`<button class="cta" id="sb">Aktifkan sensor gerak untuk cek PDI</button>`;
-    }else if(ph==='play'&&GG){h=gPlay()
-    }else if((ph==='result'||ph==='end')&&GG){
-      h=`<div><div class="k">${ph==='end'?'Game selesai':'Shift '+(S.ri+1)+' selesai'}</div><h2>${ph==='end'&&t.r===1?(S.mode==='solo'?'Kamu juara':'Tim kamu juara'):esc(S.mode==='solo'?name:t.name)}</h2></div><div class="big">P${t.r}</div><p>${t.sc||0} poin${S.mode==='solo'?'':' untuk tim'}. ${ph==='end'?'Terima kasih sudah bermain.':'Lihat layar utama untuk shift berikutnya.'}</p>`;
+      if(GG)h+='<img class="plogo" src="assets/yours-logo-white.png" alt="YOURS" onerror="this.remove()">';
+      if(S.mode==='solo')h+=sec('Mode individu','Karaktermu')+`<div class="xcards one"><div class="xcard sel" style="--k:${t.color}"><span class="xci">${gameIc()}</span><b>${esc(name)}</b><small>Warna kamu di layar</small></div></div>`;
+      else if(S.pick&&S.teams.length>1)h+=sec('Pilih','Tim kamu',S.teams.length)+`<div class="xcards">`+S.teams.map((x,i)=>`<button data-t="${i}" class="xcard ${i===me.team?'sel':''}" style="--k:${x.color}"><span class="xci">${gameIc()}</span><b>${esc(x.name)}</b>${i===me.team?`<span class="xchk">${IC.check}</span>`:''}</button>`).join('')+`</div>`;
+      else h+=sec('Kamu bergabung di','Tim kamu')+`<div class="xcards one"><div class="xcard sel" style="--k:${t.color}"><span class="xci">${gameIc()}</span><b>${esc(t.name)}</b><small>Dibagi otomatis</small></div></div>`;
+      h+=sec('Perangkat','Sensor HP')+sensRows;
+      if(!sensorsAsked)h+=`<button class="xbtn" id="sb">Aktifkan mic dan sensor</button>`;
+      h+=`<div class="xwait"><i></i>Menunggu host memulai game</div>`;
     }else if(ph==='intro'){
-      h=`<div><div class="k">Ronde ${S.ri+1} dari ${S.n}</div><h2>${esc(S.round.title)}</h2></div><p>${esc(S.round.desc)}</p><div class="big" id="ptimer"></div>`;
-      if(!sensorsAsked&&(S.round.type==='shout'||S.round.type==='shake'))h+=`<button class="cta" id="sb">Aktifkan mic dan sensor</button>`;
+      h=hero({k:(GG?'Shift ':'Ronde ')+(S.ri+1)+' dari '+S.n,t:esc(S.round.title),p:GG?'Ambil pesanan, kerjakan 5 langkah, dan kirim ke truk yang benar. Salah langkah kena tunda.':esc(S.round.desc),btn:`<div class="xcount"><b data-tm></b><small>detik lagi</small></div>`});
+      if(GG&&!motionOK)h+=`<button class="xbtn ghost" id="sb">Aktifkan sensor gerak untuk cek PDI</button>`;
+      if(!GG&&!sensorsAsked&&(S.round.type==='shout'||S.round.type==='shake'))h+=`<button class="xbtn ghost" id="sb">Aktifkan mic dan sensor</button>`;
+    }else if(ph==='play'&&GG){h=gPlay()
     }else if(ph==='play'){
-      const lab=md==='tap'?['Daki','Tap secepat mungkin']:md==='shout'?['Teriak','Makin keras, makin kencang']:['Goyang','Goyangkan sekuat tenaga'];
-      const fb=md==='tap'&&S.round.type!=='tap'?'<p style="text-align:center;font-size:13px">Sensor belum aktif, jadi kamu pakai tap.</p>':'';
-      h=`<div class="ptm"><b id="ptimer"></b><span>detik</span></div>
-        <div id="padw"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="none" stroke="rgba(255,255,255,.09)" stroke-width="3"/><circle id="ring" cx="50" cy="50" r="46" fill="none" stroke="var(--c)" stroke-width="3" stroke-linecap="round" stroke-dasharray="${RING}" stroke-dashoffset="${RING}"/></svg>
-        <div id="pad"><b>${lab[0]}</b><small>${lab[1]}</small></div></div>${fb}`;
+      const lab=md==='tap'?['Daki','Tap secepat mungkin',IC.mount]:md==='shout'?['Teriak','Makin keras, makin kencang',IC.mic]:['Goyang','Goyangkan sekuat tenaga',IC.shake];
+      h=`<div id="padw"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="4"/><circle id="ring" cx="50" cy="50" r="46" fill="none" stroke="var(--c)" stroke-width="4" stroke-linecap="round" stroke-dasharray="${RING}" stroke-dashoffset="${RING}"/></svg>
+        <div id="pad"><span class="xpadi">${lab[2]}</span><b>${lab[0]}</b><small>${lab[1]}</small></div></div>`+
+        (md==='tap'&&S.round.type!=='tap'?'<div class="xnote">Sensor belum aktif, jadi kamu pakai tap.</div>':'')+
+        `<div class="xlist">`+row({ic:IC.flag,tc:t.color,cols:[['Ronde',esc(S.round.title)],['Waktu','<span data-tm></span> dtk']]})+`</div>`;
     }else if(ph==='q'||ph==='reveal'){
-      h=`<div class="k">Soal ${S.q.i+1} dari ${S.q.n}</div><div class="pq">${esc(S.q.text)}</div><div class="po">`+
+      h=sec('Soal '+(S.q.i+1)+' dari '+S.q.n,'Kuis')+`<div class="xq">${esc(S.q.text)}</div><div class="xlist">`+
         S.q.opts.map((o,i)=>{let c='';if(ph==='reveal'){c=i===S.ans?'ok':(i===myAns?'no':'')}else if(i===myAns)c='sel';
-          return`<button data-a="${i}" class="${c}" ${myAns!=null||ph==='reveal'?'disabled':''}><i>${'ABCD'[i]}</i>${esc(o)}</button>`}).join('')+`</div>`+
-        (ph==='reveal'?`<div class="verdict ${myAns===S.ans?'ok':'no'}">${myAns===S.ans?'Benar':myAns==null?'Waktu habis':'Belum tepat'}</div>`:myAns!=null?'<div class="wait"><i></i>Jawaban terkunci, tunggu hasilnya</div>':'<div class="ptm"><b id="ptimer"></b><span>detik</span></div>');
-    }else if(ph==='result'){
-      h=`<div><div class="k">Ronde ${S.ri+1} selesai</div><h2>${esc(t.name)}</h2></div><div class="big">P${t.r}</div><div class="prog"><i style="width:${Math.round(t.f*100)}%"></i></div><p>${Math.round(t.f*100)}% perjalanan ke puncak. Lihat layar utama untuk ronde berikutnya.</p>`;
-    }else if(ph==='end'){
-      h=`<div><div class="k">Game selesai</div><h2>${t.r===1?(S.mode==='solo'?'Kamu juara':'Tim kamu juara'):esc(t.name)}</h2></div><div class="big">P${t.r}</div><p>${S.mode==='solo'?'Posisi '+t.r+' dari '+S.teams.length+' pendaki. ':''}Terima kasih sudah bermain.</p>`;
+          return`<button data-a="${i}" class="xrow xopt ${c}" ${myAns!=null||ph==='reveal'?'disabled':''}><span class="xtile">${'ABCD'[i]}</span><div class="xcols"><div><b>${esc(o)}</b></div></div>${c==='ok'?`<span class="xok">${IC.check}</span>`:''}</button>`}).join('')+`</div>`+
+        (ph==='reveal'?`<div class="xverd ${myAns===S.ans?'ok':'no'}">${myAns===S.ans?'Benar!':myAns==null?'Waktu habis':'Belum tepat'}</div>`:myAns!=null?'<div class="xwait"><i></i>Jawaban terkunci, tunggu hasilnya</div>':'');
+    }else if(ph==='result'||ph==='end'){
+      const end=ph==='end',win=end&&t.r===1,solo=S.mode==='solo';
+      h=hero({cls:win?'win':'',stars:win||!end,col:t.color,ic:win?IC.trophy:gameIc(),k:end?'Game selesai':(GG?'Shift ':'Ronde ')+(S.ri+1)+' selesai',
+        t:win?(solo?'Kamu juara!':'Tim kamu juara!'):'Posisi '+t.r,
+        p:(solo?esc(name):esc(t.name))+(end?'. Terima kasih sudah bermain.':'. Lihat layar utama untuk '+(GG?'shift':'ronde')+' berikutnya.'),
+        chips:[['P'+t.r,'Posisi'],[GG?(t.sc||0):Math.round((t.f||0)*100)+'%',GG?'Poin':'Ke puncak'],[S.teams.length,solo?'Pemain':'Tim']]});
     }
     B.innerHTML=h;
     const sb=$('sb');if(sb)sb.onclick=sensors;
