@@ -313,6 +313,9 @@ input[type=color]{padding:3px;height:40px;cursor:pointer}
 #phone #pbody{justify-content:flex-start;gap:16px;padding:20px 18px 24px;text-align:left}
 #phone #pstat{color:var(--psub);border-top:0;font-size:12px}
 #phone #pstat.on i{background:var(--po)}
+#phone #pstat{cursor:pointer;text-decoration:underline dotted rgba(255,255,255,.25);text-underline-offset:3px}
+#pdiag{position:absolute;inset:0;z-index:50;background:rgba(10,6,4,.92);backdrop-filter:blur(6px);overflow:auto;padding:22px 18px}
+#pdiag .dbox{display:grid;gap:14px}#pdiag .xrow{min-height:56px;padding:10px 14px}#pdiag .xcols b{white-space:normal;font-size:14.5px}
 .xwho span::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--c);margin-right:6px;box-shadow:0 0 0 2px rgba(255,255,255,.85);vertical-align:1px}
 #phone .plogo{height:26px;width:auto;align-self:flex-start;opacity:.95}
 .xsec{display:flex;align-items:center;gap:12px}
@@ -534,37 +537,34 @@ function route(){
 window.addEventListener('hashchange',route);
 
 /* ===================== NETWORK ===================== */
-// Two transports: direct WebRTC (PeerJS) and a relay over a public MQTT broker (WSS).
-// Messages go over whichever works; the relay gets through networks that block WebRTC.
-const BROKERS=['wss://broker.emqx.io:8084/mqtt','wss://broker.hivemq.com:8884/mqtt','wss://test.mosquitto.org:8081/mqtt'];
+// Direct WebRTC (PeerJS) plus a relay over public MQTT brokers (WSS). The host listens on every
+// broker at once; a phone uses the first broker it can reach (port 443 first), so only one needs to work.
+const BROKERS=['wss://mqtt.eclipseprojects.io:443/mqtt','wss://broker.emqx.io:8084/mqtt','wss://broker.hivemq.com:8884/mqtt','wss://test.mosquitto.org:8081/mqtt'];
+const bName=u=>u.replace('wss://','').replace(/\/mqtt$/,'');
 const relayTopic=(room,key)=>'trailsummit/v2/'+room+'-'+key;
 const dec=p=>{try{return JSON.parse(typeof p==='string'?p:new TextDecoder().decode(p))}catch(e){return null}};
-function relayClient(startIdx,onReady,onMsg,subs){
-  // tries brokers in order until one connects; reconnects and fails over automatically
-  let idx=startIdx||0,cl=null,timer=null,ready=false,dead=false;
-  const open=()=>{
-    if(dead||typeof mqtt==='undefined')return;
-    try{cl&&cl.end(true)}catch(e){}
-    ready=false;
-    const url=BROKERS[idx%BROKERS.length];
-    cl=mqtt.connect(url,{clientId:'ts_'+Math.random().toString(36).slice(2,12),clean:true,keepalive:30,reconnectPeriod:2500,connectTimeout:7000});
-    clearTimeout(timer);timer=setTimeout(()=>{if(!ready){idx++;open()}},8000);
-    cl.on('connect',()=>{ready=true;clearTimeout(timer);subs().forEach(t=>cl.subscribe(t,{qos:0}));onReady(true,idx%BROKERS.length)});
-    cl.on('message',(t,p)=>{const d=dec(p);if(d)onMsg(t,d)});
-    cl.on('offline',()=>{ready=false;onReady(false,idx%BROKERS.length)});
-    cl.on('error',()=>{});
-  };
-  open();
-  return{pub(t,m){if(cl&&ready)try{cl.publish(t,JSON.stringify(m),{qos:0})}catch(e){}},sub(t){if(cl&&ready)cl.subscribe(t,{qos:0})},ready:()=>ready,idx:()=>idx%BROKERS.length,
-    waitLib(cb){if(typeof mqtt!=='undefined'){cb();return}let n=0;const iv=setInterval(()=>{if(typeof mqtt!=='undefined'||++n>40){clearInterval(iv);if(typeof mqtt!=='undefined')cb()}},250)},retry:open};
+const NETD={lib:{peer:typeof Peer!=='undefined',mqtt:false},p2p:'belum',sig:'belum',relay:'belum',broker:'',tried:[],err:''};
+function whenMqtt(cb){if(typeof mqtt!=='undefined'){NETD.lib.mqtt=true;cb();return}let n=0;const iv=setInterval(()=>{if(typeof mqtt!=='undefined'){clearInterval(iv);NETD.lib.mqtt=true;cb()}else if(++n>60){clearInterval(iv);NETD.err='Pustaka relay gagal dimuat';NETD.relay='gagal'}},250)}
+function mConn(url,subs,onMsg,onState){
+  const r={url,ready:false,cl:null,err:''};
+  try{
+    r.cl=mqtt.connect(url,{clientId:'ts_'+Math.random().toString(36).slice(2,12),clean:true,keepalive:30,reconnectPeriod:4000,connectTimeout:8000,protocolVersion:4});
+    r.cl.on('connect',()=>{r.ready=true;r.err='';subs.forEach(t=>r.cl.subscribe(t,{qos:0}));onState()});
+    r.cl.on('message',(t,p)=>{const d=dec(p);if(d)onMsg(t,d)});
+    r.cl.on('close',()=>{if(r.ready){r.ready=false;onState()}});
+    r.cl.on('error',e=>{r.err=String(e&&e.message||e);onState()});
+  }catch(e){r.err=String(e)}
+  r.pub=(t,m)=>{if(r.ready)try{r.cl.publish(t,JSON.stringify(m),{qos:0})}catch(e){}};
+  r.end=()=>{try{r.cl.end(true)}catch(e){}};
+  return r;
 }
 function HostNet(room,key,onMsg,onStatus){
-  const conns={},route={},st={p2p:'...',relay:'...',b:0};let bc=null,peer=null,relay=null;
-  const report=()=>onStatus(st);
+  const conns={},route={},st={p2p:'...',relays:BROKERS.map(()=>'...')};let bc=null,peer=null,relays=[];
+  const T=relayTopic(room,key),report=()=>{st.relays=BROKERS.map((u,i)=>relays[i]?(relays[i].ready?'ok':relays[i].err?'gagal':'...'):st.relays[i]);onStatus(st)};
   if(LOCAL){
     bc=new BroadcastChannel(PREFIX+room);
     bc.onmessage=e=>{const d=e.data;if(d&&d.from)onMsg(d.from,d.msg)};
-    st.p2p='lokal';st.relay='lokal';setTimeout(report,0);
+    st.p2p='lokal';st.relays=BROKERS.map(()=>'lokal');setTimeout(()=>onStatus(st),0);
   }else{
     if(typeof Peer!=='undefined'){
       peer=new Peer(PREFIX+room);
@@ -572,32 +572,31 @@ function HostNet(room,key,onMsg,onStatus){
       peer.on('connection',c=>{c.on('data',d=>{if(d&&d.pid){conns[d.pid]=c;route[d.pid]='p';onMsg(d.pid,d)}})});
       peer.on('disconnected',()=>{st.p2p='putus';report();try{peer.reconnect()}catch(e){}});
       peer.on('error',e=>{if(e.type==='unavailable-id')st.p2p='dipakai';else if(e.type!=='peer-unavailable')st.p2p='gagal';report()});
-    }else{st.p2p='gagal';}
-    const T=relayTopic(room,key);
-    const start=()=>{relay=relayClient(0,(ok,b)=>{st.relay=ok?'ok':'putus';st.b=b;report()},(t,d)=>{if(d&&d.pid&&t===T+'/h'){route[d.pid]='r';onMsg(d.pid,d)}},()=>[T+'/h'])};
-    if(typeof mqtt!=='undefined')start();else{const tmp=relayClient(0,()=>{},()=>{},()=>[]);tmp.waitLib(start)}
+    }else st.p2p='gagal';
+    whenMqtt(()=>{relays=BROKERS.map((u,i)=>mConn(u,[T+'/h'],(t,d)=>{if(d.pid&&t===T+'/h'){route[d.pid]=i;onMsg(d.pid,d)}},report));report()});
+    setTimeout(()=>{if(!NETD.lib.mqtt){st.relays=BROKERS.map(()=>'gagal');report()}},15500);
     report();
   }
-  const T=relayTopic(room,key);
   return{
     send(pid,msg){
       if(bc){bc.postMessage({to:pid,msg});return}
-      const c=conns[pid];
-      if(route[pid]!=='r'&&c&&c.open){try{c.send(msg)}catch(e){}return}
-      if(relay)relay.pub(T+'/p/'+pid,msg);
+      const r=route[pid];
+      if(typeof r==='number'){if(relays[r])relays[r].pub(T+'/p/'+pid,msg);return}
+      const c=conns[pid];if(c&&c.open)try{c.send(msg)}catch(e){}
     },
     broadcast(msg){
       if(bc){bc.postMessage({to:'*',msg});return}
-      for(const k in conns){const c=conns[k];if(route[k]!=='r'&&c.open)try{c.send(msg)}catch(e){}}
-      if(relay&&Object.values(route).includes('r'))relay.pub(T+'/a',msg);
+      for(const k in conns){const c=conns[k];if(route[k]==='p'&&c.open)try{c.send(msg)}catch(e){}}
+      const used=new Set(Object.values(route).filter(v=>typeof v==='number'));
+      used.forEach(i=>relays[i]&&relays[i].pub(T+'/a',msg));
     },
-    status:()=>st,brokerIdx:()=>st.b
+    status:()=>st
   };
 }
 function PhoneNet(room,key,bIdx,pid,onMsg,onStatus){
-  let bc=null,peer=null,conn=null,retry=null,relay=null,via='';
-  const p2pOpen=()=>conn&&conn.open;
-  const upd=()=>{const was=via;via=p2pOpen()?'langsung':relay&&relay.ready()?'relay':'';onStatus(!!via,via,was!==via)};
+  let bc=null,peer=null,conn=null,retry=null,relay=null,bi=0,via='',rtimer=null;
+  const p2pOpen=()=>!!(conn&&conn.open);
+  const upd=()=>{const was=via;via=p2pOpen()?'langsung':relay&&relay.ready?'relay':'';NETD.p2p=p2pOpen()?'tersambung':NETD.p2p;NETD.relay=relay&&relay.ready?'tersambung':NETD.relay;onStatus(!!via,via,was!==via)};
   if(LOCAL){
     bc=new BroadcastChannel(PREFIX+room);
     bc.onmessage=e=>{const d=e.data;if(d&&(d.to===pid||d.to==='*'))onMsg(d.msg)};
@@ -606,36 +605,44 @@ function PhoneNet(room,key,bIdx,pid,onMsg,onStatus){
     if(typeof Peer!=='undefined'){
       const connect=()=>{
         if(!peer||peer.destroyed)return;
+        NETD.p2p='mencoba';
         conn=peer.connect(PREFIX+room,{reliable:true});
         conn.on('open',upd);
         conn.on('data',onMsg);
-        conn.on('close',()=>{upd();sched()});
-        conn.on('error',()=>{upd();sched()});
+        conn.on('close',()=>{NETD.p2p='terputus';upd();sched()});
+        conn.on('error',()=>{NETD.p2p='gagal';upd();sched()});
       };
-      const sched=()=>{clearTimeout(retry);retry=setTimeout(()=>{if(!p2pOpen())connect()},3000)};
+      const sched=()=>{clearTimeout(retry);retry=setTimeout(()=>{if(!p2pOpen())connect()},4000)};
       const mk=()=>{
-        peer=new Peer();
-        peer.on('open',connect);
-        peer.on('disconnected',()=>{upd();try{peer.reconnect()}catch(e){}});
-        peer.on('error',e=>{upd();if(e.type==='peer-unavailable')sched();else if(e.type==='network'||e.type==='server-error'){try{peer.destroy()}catch(x){}setTimeout(mk,3000)}});
+        peer=new Peer();NETD.sig='mencoba';
+        peer.on('open',()=>{NETD.sig='tersambung';connect()});
+        peer.on('disconnected',()=>{NETD.sig='terputus';upd();try{peer.reconnect()}catch(e){}});
+        peer.on('error',e=>{NETD.p2p='gagal ('+e.type+')';upd();if(e.type==='peer-unavailable')sched();else if(e.type==='network'||e.type==='server-error'){NETD.sig='gagal';try{peer.destroy()}catch(x){}setTimeout(mk,4000)}});
       };mk();
       document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!p2pOpen())sched()});
-    }
+    }else NETD.p2p='pustaka gagal dimuat';
     if(key){
-      const T=relayTopic(room,key);
-      const start=()=>{relay=relayClient(bIdx,()=>upd(),(t,d)=>{if(!p2pOpen()&&(t===T+'/a'||t===T+'/p/'+pid))onMsg(d)},()=>[T+'/a',T+'/p/'+pid])};
-      if(typeof mqtt!=='undefined')start();else relayClient(0,()=>{},()=>{},()=>[]).waitLib(start);
-    }
+      const T=relayTopic(room,key),subs=[T+'/a',T+'/p/'+pid];
+      const next=()=>{
+        if(relay&&relay.ready)return;
+        if(relay)relay.end();
+        const url=BROKERS[bi%BROKERS.length];NETD.broker=bName(url);NETD.relay='mencoba';if(!NETD.tried.includes(NETD.broker))NETD.tried.push(NETD.broker);upd();
+        relay=mConn(url,subs,(t,d)=>{if(!p2pOpen()&&(t===T+'/a'||t===T+'/p/'+pid))onMsg(d)},()=>{if(relay.err)NETD.err=bName(url)+': '+relay.err;if(!relay.ready&&NETD.relay==='tersambung')NETD.relay='terputus';upd()});
+        clearTimeout(rtimer);rtimer=setTimeout(()=>{if(!relay.ready){bi++;next()}},9000);
+      };
+      whenMqtt(next);
+      setInterval(()=>{if(relay&&!relay.ready&&NETD.relay==='terputus'){clearTimeout(rtimer);rtimer=setTimeout(()=>{if(!relay.ready){bi++;next()}},9000)}},5000);
+    }else NETD.relay='QR lama, scan ulang';
   }
   const T=key?relayTopic(room,key):'';
   return{send(msg){msg.pid=pid;if(bc){bc.postMessage({from:pid,msg});return}
-    if(p2pOpen()){try{conn.send(msg)}catch(e){}}else if(relay&&relay.ready())relay.pub(T+'/h',msg)},
+    if(p2pOpen()){try{conn.send(msg)}catch(e){}}else if(relay&&relay.ready)relay.pub(T+'/h',msg)},
     via:()=>via};
 }
 
 /* ===================== HOST ===================== */
 const Host=(()=>{
-  let cfg,net,room,rkey,lastB=-1,cv,cx,W=0,H=0,DPR=1,bgC=null,fgC=null;
+  let cfg,net,room,rkey,cv,cx,W=0,H=0,DPR=1,bgC=null,fgC=null;
   const P={};
   let T=[];
   const G={game:'trail',phase:'lobby',ri:-1,timer:0,tmax:1,q:null,qi:0,qn:1,qPtr:0,finish:0,trackLen:1,time:0,parts:[]};
@@ -650,13 +657,12 @@ const Host=(()=>{
     cv=$('cv');cx=cv.getContext('2d');
     addEventListener('resize',resize);resize();
     net=HostNet(room,rkey,onMsg,st=>{
-      const w=$('warn'),ok=st.p2p==='ok'||st.relay==='ok';
+      const rok=st.relays.includes('ok'),ok=st.p2p==='ok'||rok,w=$('warn');
       if(LOCAL){w.textContent='Mode demo lokal: HP hanya bisa bergabung dari browser yang sama.';w.classList.remove('hide')}
-      else if(st.p2p==='dipakai'&&st.relay!=='ok'){w.textContent='Kode room sedang dipakai tab lain. Tutup tab host lain lalu muat ulang.';w.classList.remove('hide')}
-      else if(!ok&&(st.p2p==='gagal'||st.relay==='putus')){w.textContent='Belum tersambung ke server koneksi. Pastikan laptop terhubung internet.';w.classList.remove('hide')}
+      else if(st.p2p==='dipakai'&&!rok){w.textContent='Kode room sedang dipakai tab lain. Tutup tab host lain lalu muat ulang.';w.classList.remove('hide')}
+      else if(!ok&&st.p2p!=='...'&&!st.relays.includes('...')){w.textContent='Belum tersambung ke server koneksi. Pastikan laptop terhubung internet.';w.classList.remove('hide')}
       else w.classList.add('hide');
       const cs=$('connst');if(cs)cs.innerHTML=connHTML(st);
-      if(st.relay==='ok'&&st.b!==lastB){lastB=st.b;if(G.phase==='lobby')drawLobby()}
     });
     resetTeams();
     $('bMain').onclick=mainBtn;$('bSkip').onclick=skip;$('bBot').onclick=addBot;
@@ -985,9 +991,9 @@ const Host=(()=>{
     $('hInfo').textContent=Object.keys(P).length+' pemain';
     tower(false);
   }
-  function connHTML(st){const d=(l,v)=>`<span class="${v==='ok'||v==='lokal'?'on':v==='...'||!v?'wait':'off'}"><i></i>${l}</span>`;return d('Langsung',st.p2p)+d('Relay',st.relay)}
+  function connHTML(st){const cls=v=>v==='ok'||v==='lokal'?'on':v==='...'||!v?'wait':'off';const rs=st.relays||[],n=rs.filter(v=>v==='ok'||v==='lokal').length;return`<span class="${cls(st.p2p)}"><i></i>Langsung</span><span class="${n?'on':rs.includes('...')?'wait':'off'}"><i></i>Relay ${n}/${rs.length||BROKERS.length}</span>`}
   function drawLobby(){
-    const url=location.origin+location.pathname+'?j='+room+'&k='+rkey+'&b='+Math.max(0,lastB)+(isG()?'&g=1':'')+'&n='+encodeURIComponent(TITLE().slice(0,40))+(QS.has('local')?'&local=1':'');
+    const url=location.origin+location.pathname+'?j='+room+'&k='+rkey+(isG()?'&g=1':'')+'&n='+encodeURIComponent(TITLE().slice(0,40))+(QS.has('local')?'&local=1':'');
     let teams='';
     if(SOLO()){const ps=Object.values(P).sort((a,b)=>(a.jt||0)-(b.jt||0));
       teams=`<div class="sl"><div class="hd"><b>Pemain</b><span class="ct">${ps.length} / 50</span></div><div class="chips">${ps.length?ps.map(p=>`<span class="chip pchip ${online(p)?'':'off'}" style="--c:${(T[p.team]||{}).color||'#888'}"><i></i>${esc(p.name)}</span>`).join(''):'<span class="empty">Belum ada pemain. Scan QR untuk bergabung.</span>'}</div></div>`}
@@ -1770,13 +1776,30 @@ const Phone=(()=>{
     if(QS.get('pid'))pid=QS.get('pid');
     net=PhoneNet(room,QS.get('k'),+QS.get('b')||0,pid,onMsg,(ok,via,changed)=>{connected=ok;
       stat(ok,ok?(me?'Terhubung ke room '+room:'Tersambung, menunggu layar host…')+(via==='relay'?' (relay)':''):'Menghubungkan ke room '+room+'…');
-      if(ok&&changed&&wantJoin)net.send({t:'join',name})});
+      if(ok&&changed&&wantJoin)net.send({t:'join',name});
+      const jb=$('jb');if(jb&&wantJoin)jb.textContent=ok?'Bergabung…':'Menyambungkan…'});
+    $('pstat').onclick=showDiag;
     setInterval(()=>{if(wantJoin&&!me&&connected)net.send({t:'join',name})},1500);
     setInterval(()=>{if(me&&connected)net.send({t:'hb'})},3000);
-    setTimeout(()=>{if(!connected)stat(false,'Belum tersambung. Pastikan HP terhubung internet dan scan QR terbaru dari layar.')},15000);
+    setTimeout(()=>{if(!connected){stat(false,'Belum tersambung. Ketuk di sini untuk detail.');showDiag()}},20000);
     draw();
     setInterval(tick,250);
     (function raf(){meter();requestAnimationFrame(raf)})();
+  }
+  function showDiag(){
+    let el=$('pdiag');if(!el){el=document.createElement('div');el.id='pdiag';$('phone').appendChild(el)}
+    const r=(k,v,okv)=>`<div class="xrow"><div class="xcols"><div><span>${k}</span><b style="color:${okv?'#2BD48C':'#FFB28A'}">${esc(v)}</b></div></div></div>`;
+    const render=()=>{el.innerHTML=`<div class="dbox"><div class="xsec"><div><span class="xk">Bantuan koneksi</span><h2 class="xh2">Diagnosa</h2></div></div>
+      <div class="xlist">${r('Room',room+(QS.get('k')?'':' (QR lama, tanpa kunci relay)'),!!QS.get('k'))}
+      ${r('Koneksi langsung (server)',NETD.lib.peer?NETD.sig:'pustaka gagal dimuat',NETD.sig==='tersambung')}
+      ${r('Koneksi langsung ke layar host',NETD.p2p,NETD.p2p==='tersambung')}
+      ${r('Relay',NETD.lib.mqtt?NETD.relay+(NETD.broker?' via '+NETD.broker:''):'pustaka belum dimuat',NETD.relay==='tersambung')}
+      ${r('Server relay dicoba',NETD.tried.join(', ')||'-',false)}
+      ${NETD.err?r('Error terakhir',NETD.err.slice(0,120),false):''}
+      ${r('Status pemain',me?'Sudah bergabung':wantJoin?'Menunggu konfirmasi layar host':'Belum menekan Gabung',!!me)}</div>
+      <p class="xp">Kalau semua merah, HP tidak bisa menjangkau server koneksi: coba ganti dari WiFi ke data seluler atau sebaliknya. Kalau relay hijau tapi belum bergabung, scan ulang QR dari layar host terbaru.</p>
+      <button class="xbtn" id="dclose">Tutup</button></div>`;$('dclose').onclick=()=>{clearInterval(iv);el.remove()}};
+    render();const iv=setInterval(()=>{if(!document.body.contains(el))return clearInterval(iv);render()},1500);
   }
   function stat(ok,t){$('pstat').classList.toggle('on',!!ok);$('pstt').textContent=t}
   function onMsg(m){
