@@ -659,7 +659,10 @@ const Host=(()=>{
     net=HostNet(room,rkey,onMsg,st=>{
       const rok=st.relays.includes('ok'),ok=st.p2p==='ok'||rok,w=$('warn');
       if(LOCAL){w.textContent='Mode demo lokal: HP hanya bisa bergabung dari browser yang sama.';w.classList.remove('hide')}
-      else if(st.p2p==='dipakai'&&!rok){w.textContent='Kode room sedang dipakai tab lain. Tutup tab host lain lalu muat ulang.';w.classList.remove('hide')}
+      else if(st.p2p==='dipakai'&&G.phase==='lobby'&&!Object.values(P).some(p=>!p.bot)){
+        const nr=Array.from({length:4},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ'[Math.random()*24|0]).join('');
+        sessionStorage.setItem('trail_room',nr);w.textContent='Kode room lama masih tercatat di server, membuat kode room baru…';w.classList.remove('hide');setTimeout(()=>location.reload(),600);return}
+      else if(st.p2p==='dipakai'&&!rok){w.textContent='Koneksi langsung bentrok dengan tab host lain. Tutup tab host lain.';w.classList.remove('hide')}
       else if(!ok&&st.p2p!=='...'&&!st.relays.includes('...')){w.textContent='Belum tersambung ke server koneksi. Pastikan laptop terhubung internet.';w.classList.remove('hide')}
       else w.classList.add('hide');
       const cs=$('connst');if(cs)cs.innerHTML=connHTML(st);
