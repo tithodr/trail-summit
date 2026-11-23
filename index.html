@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800&family=Saira:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://unpkg.com/mqtt@5.15.2/dist/mqtt.min.js" onerror="var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/mqtt@5.15.2/dist/mqtt.min.js';document.head.appendChild(s)"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 :root{
@@ -121,6 +122,7 @@ body.light .po button i,body.light .quiz .o i{background:rgba(24,44,90,.08)}
 #lobby .ev{font-family:var(--fd);font-weight:800;font-size:6.4vh;line-height:.92;max-width:11em}
 #lobby .llogo{height:5.2vh;width:auto;margin-bottom:.4vh}
 #hud .hlogo{height:3.4vh;width:auto;display:block;margin-bottom:1vh}
+#lobby .connst{display:flex;gap:1.2vw;font-size:1.5vh;color:var(--mute)}#lobby .connst span{display:inline-flex;align-items:center;gap:.5vh}#lobby .connst i{width:1vh;height:1vh;border-radius:50%;background:#9AA1AC}#lobby .connst .on i{background:#2BB673}#lobby .connst .off i{background:#E5484D}#lobby .connst .wait i{background:#F5A524}
 #lobby .how{color:var(--soft);font-size:2vh;line-height:1.5;max-width:22em}
 #qr{background:#fff;padding:1.6vh;border-radius:14px;line-height:0}
 #qr img,#qr canvas{width:27vh!important;height:27vh!important;display:block}
@@ -477,7 +479,7 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const QS=new URLSearchParams(location.search);
-const LOCAL=QS.has('local')||typeof Peer==='undefined';
+const LOCAL=QS.has('local');
 const PREFIX='trailsummit-';
 const TYPES={tap:'Tap cepat',shout:'Teriak',shake:'Goyang HP',quiz:'Kuis'};
 const COLORS=['#2F5BEA','#E5484D','#30A46C','#F5A524','#8E4EC6','#12A594','#D6409F','#8DB600','#F76B15','#E6E8EC'];
@@ -532,57 +534,108 @@ function route(){
 window.addEventListener('hashchange',route);
 
 /* ===================== NETWORK ===================== */
-function HostNet(room,onMsg,onStatus){
-  const conns={};let bc=null,peer=null;
+// Two transports: direct WebRTC (PeerJS) and a relay over a public MQTT broker (WSS).
+// Messages go over whichever works; the relay gets through networks that block WebRTC.
+const BROKERS=['wss://broker.emqx.io:8084/mqtt','wss://broker.hivemq.com:8884/mqtt','wss://test.mosquitto.org:8081/mqtt'];
+const relayTopic=(room,key)=>'trailsummit/v2/'+room+'-'+key;
+const dec=p=>{try{return JSON.parse(typeof p==='string'?p:new TextDecoder().decode(p))}catch(e){return null}};
+function relayClient(startIdx,onReady,onMsg,subs){
+  // tries brokers in order until one connects; reconnects and fails over automatically
+  let idx=startIdx||0,cl=null,timer=null,ready=false,dead=false;
+  const open=()=>{
+    if(dead||typeof mqtt==='undefined')return;
+    try{cl&&cl.end(true)}catch(e){}
+    ready=false;
+    const url=BROKERS[idx%BROKERS.length];
+    cl=mqtt.connect(url,{clientId:'ts_'+Math.random().toString(36).slice(2,12),clean:true,keepalive:30,reconnectPeriod:2500,connectTimeout:7000});
+    clearTimeout(timer);timer=setTimeout(()=>{if(!ready){idx++;open()}},8000);
+    cl.on('connect',()=>{ready=true;clearTimeout(timer);subs().forEach(t=>cl.subscribe(t,{qos:0}));onReady(true,idx%BROKERS.length)});
+    cl.on('message',(t,p)=>{const d=dec(p);if(d)onMsg(t,d)});
+    cl.on('offline',()=>{ready=false;onReady(false,idx%BROKERS.length)});
+    cl.on('error',()=>{});
+  };
+  open();
+  return{pub(t,m){if(cl&&ready)try{cl.publish(t,JSON.stringify(m),{qos:0})}catch(e){}},sub(t){if(cl&&ready)cl.subscribe(t,{qos:0})},ready:()=>ready,idx:()=>idx%BROKERS.length,
+    waitLib(cb){if(typeof mqtt!=='undefined'){cb();return}let n=0;const iv=setInterval(()=>{if(typeof mqtt!=='undefined'||++n>40){clearInterval(iv);if(typeof mqtt!=='undefined')cb()}},250)},retry:open};
+}
+function HostNet(room,key,onMsg,onStatus){
+  const conns={},route={},st={p2p:'...',relay:'...',b:0};let bc=null,peer=null,relay=null;
+  const report=()=>onStatus(st);
   if(LOCAL){
     bc=new BroadcastChannel(PREFIX+room);
     bc.onmessage=e=>{const d=e.data;if(d&&d.from)onMsg(d.from,d.msg)};
-    onStatus('ok');
+    st.p2p='lokal';st.relay='lokal';setTimeout(report,0);
   }else{
-    peer=new Peer(PREFIX+room);
-    peer.on('open',()=>onStatus('ok'));
-    peer.on('connection',c=>{c.on('data',d=>{if(d&&d.pid){conns[d.pid]=c;onMsg(d.pid,d)}})});
-    peer.on('disconnected',()=>{onStatus('Koneksi server terputus, menyambung ulang…');try{peer.reconnect()}catch(e){}});
-    peer.on('error',e=>{
-      if(e.type==='unavailable-id')onStatus('Kode room sedang dipakai tab lain. Tutup tab host lain lalu muat ulang.');
-      else if(e.type!=='peer-unavailable')onStatus('Gangguan koneksi ('+e.type+')');
-    });
+    if(typeof Peer!=='undefined'){
+      peer=new Peer(PREFIX+room);
+      peer.on('open',()=>{st.p2p='ok';report()});
+      peer.on('connection',c=>{c.on('data',d=>{if(d&&d.pid){conns[d.pid]=c;route[d.pid]='p';onMsg(d.pid,d)}})});
+      peer.on('disconnected',()=>{st.p2p='putus';report();try{peer.reconnect()}catch(e){}});
+      peer.on('error',e=>{if(e.type==='unavailable-id')st.p2p='dipakai';else if(e.type!=='peer-unavailable')st.p2p='gagal';report()});
+    }else{st.p2p='gagal';}
+    const T=relayTopic(room,key);
+    const start=()=>{relay=relayClient(0,(ok,b)=>{st.relay=ok?'ok':'putus';st.b=b;report()},(t,d)=>{if(d&&d.pid&&t===T+'/h'){route[d.pid]='r';onMsg(d.pid,d)}},()=>[T+'/h'])};
+    if(typeof mqtt!=='undefined')start();else{const tmp=relayClient(0,()=>{},()=>{},()=>[]);tmp.waitLib(start)}
+    report();
   }
+  const T=relayTopic(room,key);
   return{
-    send(pid,msg){if(bc)bc.postMessage({to:pid,msg});else{const c=conns[pid];if(c&&c.open)try{c.send(msg)}catch(e){}}},
-    broadcast(msg){if(bc)bc.postMessage({to:'*',msg});else for(const k in conns){const c=conns[k];if(c.open)try{c.send(msg)}catch(e){}}}
+    send(pid,msg){
+      if(bc){bc.postMessage({to:pid,msg});return}
+      const c=conns[pid];
+      if(route[pid]!=='r'&&c&&c.open){try{c.send(msg)}catch(e){}return}
+      if(relay)relay.pub(T+'/p/'+pid,msg);
+    },
+    broadcast(msg){
+      if(bc){bc.postMessage({to:'*',msg});return}
+      for(const k in conns){const c=conns[k];if(route[k]!=='r'&&c.open)try{c.send(msg)}catch(e){}}
+      if(relay&&Object.values(route).includes('r'))relay.pub(T+'/a',msg);
+    },
+    status:()=>st,brokerIdx:()=>st.b
   };
 }
-function PhoneNet(room,pid,onMsg,onStatus){
-  let bc=null,peer=null,conn=null,retry=null;
+function PhoneNet(room,key,bIdx,pid,onMsg,onStatus){
+  let bc=null,peer=null,conn=null,retry=null,relay=null,via='';
+  const p2pOpen=()=>conn&&conn.open;
+  const upd=()=>{const was=via;via=p2pOpen()?'langsung':relay&&relay.ready()?'relay':'';onStatus(!!via,via,was!==via)};
   if(LOCAL){
     bc=new BroadcastChannel(PREFIX+room);
     bc.onmessage=e=>{const d=e.data;if(d&&(d.to===pid||d.to==='*'))onMsg(d.msg)};
-    setTimeout(()=>onStatus(true),50);
+    setTimeout(()=>{via='lokal';onStatus(true,'lokal',true)},50);
   }else{
-    const connect=()=>{
-      if(!peer||peer.destroyed)return;
-      conn=peer.connect(PREFIX+room,{reliable:true});
-      conn.on('open',()=>onStatus(true));
-      conn.on('data',onMsg);
-      conn.on('close',()=>{onStatus(false);sched()});
-      conn.on('error',()=>{onStatus(false);sched()});
-    };
-    const sched=()=>{clearTimeout(retry);retry=setTimeout(()=>{if(!conn||!conn.open)connect()},2000)};
-    const mk=()=>{
-      peer=new Peer();
-      peer.on('open',connect);
-      peer.on('disconnected',()=>{onStatus(false);try{peer.reconnect()}catch(e){}});
-      peer.on('error',e=>{onStatus(false,e.type);if(e.type==='peer-unavailable')sched();else if(e.type==='network'||e.type==='server-error'){try{peer.destroy()}catch(x){}setTimeout(mk,2500)}});
-    };mk();
-    document.addEventListener('visibilitychange',()=>{if(!document.hidden&&(!conn||!conn.open))sched()});
+    if(typeof Peer!=='undefined'){
+      const connect=()=>{
+        if(!peer||peer.destroyed)return;
+        conn=peer.connect(PREFIX+room,{reliable:true});
+        conn.on('open',upd);
+        conn.on('data',onMsg);
+        conn.on('close',()=>{upd();sched()});
+        conn.on('error',()=>{upd();sched()});
+      };
+      const sched=()=>{clearTimeout(retry);retry=setTimeout(()=>{if(!p2pOpen())connect()},3000)};
+      const mk=()=>{
+        peer=new Peer();
+        peer.on('open',connect);
+        peer.on('disconnected',()=>{upd();try{peer.reconnect()}catch(e){}});
+        peer.on('error',e=>{upd();if(e.type==='peer-unavailable')sched();else if(e.type==='network'||e.type==='server-error'){try{peer.destroy()}catch(x){}setTimeout(mk,3000)}});
+      };mk();
+      document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!p2pOpen())sched()});
+    }
+    if(key){
+      const T=relayTopic(room,key);
+      const start=()=>{relay=relayClient(bIdx,()=>upd(),(t,d)=>{if(!p2pOpen()&&(t===T+'/a'||t===T+'/p/'+pid))onMsg(d)},()=>[T+'/a',T+'/p/'+pid])};
+      if(typeof mqtt!=='undefined')start();else relayClient(0,()=>{},()=>{},()=>[]).waitLib(start);
+    }
   }
-  return{send(msg){msg.pid=pid;if(bc)bc.postMessage({from:pid,msg});else if(conn&&conn.open)try{conn.send(msg)}catch(e){}}};
+  const T=key?relayTopic(room,key):'';
+  return{send(msg){msg.pid=pid;if(bc){bc.postMessage({from:pid,msg});return}
+    if(p2pOpen()){try{conn.send(msg)}catch(e){}}else if(relay&&relay.ready())relay.pub(T+'/h',msg)},
+    via:()=>via};
 }
 
 /* ===================== HOST ===================== */
 const Host=(()=>{
-  let cfg,net,room,cv,cx,W=0,H=0,DPR=1,bgC=null,fgC=null;
+  let cfg,net,room,rkey,lastB=-1,cv,cx,W=0,H=0,DPR=1,bgC=null,fgC=null;
   const P={};
   let T=[];
   const G={game:'trail',phase:'lobby',ri:-1,timer:0,tmax:1,q:null,qi:0,qn:1,qPtr:0,finish:0,trackLen:1,time:0,parts:[]};
@@ -593,10 +646,18 @@ const Host=(()=>{
     cfg=loadCfg();document.title=TITLE();
     room=sessionStorage.getItem('trail_room');
     if(!room){room=Array.from({length:4},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ'[Math.random()*24|0]).join('');sessionStorage.setItem('trail_room',room)}
+    rkey=sessionStorage.getItem('trail_rkey');if(!rkey){rkey=Math.random().toString(36).slice(2,8);sessionStorage.setItem('trail_rkey',rkey)}
     cv=$('cv');cx=cv.getContext('2d');
     addEventListener('resize',resize);resize();
-    net=HostNet(room,onMsg,s=>{const w=$('warn');if(s==='ok'){if(!LOCAL)w.classList.add('hide')}else{w.textContent=s;w.classList.remove('hide')}});
-    if(LOCAL){$('warn').textContent='Mode demo lokal: HP hanya bisa bergabung dari browser yang sama.';$('warn').classList.remove('hide')}
+    net=HostNet(room,rkey,onMsg,st=>{
+      const w=$('warn'),ok=st.p2p==='ok'||st.relay==='ok';
+      if(LOCAL){w.textContent='Mode demo lokal: HP hanya bisa bergabung dari browser yang sama.';w.classList.remove('hide')}
+      else if(st.p2p==='dipakai'&&st.relay!=='ok'){w.textContent='Kode room sedang dipakai tab lain. Tutup tab host lain lalu muat ulang.';w.classList.remove('hide')}
+      else if(!ok&&(st.p2p==='gagal'||st.relay==='putus')){w.textContent='Belum tersambung ke server koneksi. Pastikan laptop terhubung internet.';w.classList.remove('hide')}
+      else w.classList.add('hide');
+      const cs=$('connst');if(cs)cs.innerHTML=connHTML(st);
+      if(st.relay==='ok'&&st.b!==lastB){lastB=st.b;if(G.phase==='lobby')drawLobby()}
+    });
     resetTeams();
     $('bMain').onclick=mainBtn;$('bSkip').onclick=skip;$('bBot').onclick=addBot;
     $('bReset').onclick=toLobby;$('bSet').onclick=openSettings;
@@ -924,14 +985,15 @@ const Host=(()=>{
     $('hInfo').textContent=Object.keys(P).length+' pemain';
     tower(false);
   }
+  function connHTML(st){const d=(l,v)=>`<span class="${v==='ok'||v==='lokal'?'on':v==='...'||!v?'wait':'off'}"><i></i>${l}</span>`;return d('Langsung',st.p2p)+d('Relay',st.relay)}
   function drawLobby(){
-    const url=location.origin+location.pathname+'?j='+room+(isG()?'&g=1':'')+'&n='+encodeURIComponent(TITLE().slice(0,40))+(QS.has('local')?'&local=1':'');
+    const url=location.origin+location.pathname+'?j='+room+'&k='+rkey+'&b='+Math.max(0,lastB)+(isG()?'&g=1':'')+'&n='+encodeURIComponent(TITLE().slice(0,40))+(QS.has('local')?'&local=1':'');
     let teams='';
     if(SOLO()){const ps=Object.values(P).sort((a,b)=>(a.jt||0)-(b.jt||0));
       teams=`<div class="sl"><div class="hd"><b>Pemain</b><span class="ct">${ps.length} / 50</span></div><div class="chips">${ps.length?ps.map(p=>`<span class="chip pchip ${online(p)?'':'off'}" style="--c:${(T[p.team]||{}).color||'#888'}"><i></i>${esc(p.name)}</span>`).join(''):'<span class="empty">Belum ada pemain. Scan QR untuk bergabung.</span>'}</div></div>`}
     else for(let i=0;i<cfg.teamCount;i++){const t=cfg.teams[i],ms=members(i);
       teams+=`<div class="tc" style="--c:${t.color}"><div class="hd"><b>${esc(t.name)}</b><span class="ct">${ms.length}</span></div><div class="chips">${ms.length?ms.map(p=>`<span class="chip ${online(p)?'':'off'}">${esc(p.name)}</span>`).join(''):'<span class="empty">Belum ada pemain</span>'}</div></div>`}
-    $('lobby').innerHTML=`<div class="jn">${isG()?'<img class="llogo" src="assets/yours-logo.png" alt="YOURS" onerror="this.remove()">':''}<div class="ev">${esc(TITLE())}</div><div class="how">Buka kamera HP, scan kode ini, lalu isi nama kamu.</div><div id="qr"></div><div class="cd"><span>Kode room</span><b>${room}</b></div><div class="url">${esc(url)}</div></div><div class="tl">${teams}</div>`;
+    $('lobby').innerHTML=`<div class="jn">${isG()?'<img class="llogo" src="assets/yours-logo.png" alt="YOURS" onerror="this.remove()">':''}<div class="ev">${esc(TITLE())}</div><div class="how">Buka kamera HP, scan kode ini, lalu isi nama kamu.</div><div id="qr"></div><div class="cd"><span>Kode room</span><b>${room}</b></div><div class="url">${esc(url)}</div><div class="connst" id="connst">${connHTML(net?net.status():{})}</div></div><div class="tl">${teams}</div>`;
     try{if(typeof QRCode!=='undefined')new QRCode($('qr'),{text:url,width:512,height:512,colorDark:'#170D1B',correctLevel:QRCode.CorrectLevel.M});else $('qr').innerHTML='<div style="color:#170D1B;line-height:1.4;padding:2vh;font-size:1.7vh;width:27vh">QR tidak termuat. Buka alamat di bawah dari HP.</div>'}catch(e){}
     if(!SOLO())T.forEach(t=>{const c=cfg.teams[t.i];t.name=c.name;t.color=c.color});tower(true);
   }
@@ -1696,7 +1758,7 @@ const Admin=(()=>{
 
 /* ===================== PHONE ===================== */
 const Phone=(()=>{
-  let net,room,pid,name='',me=null,S=null,connected=false,endAt=0,inited=false,gtitle=(QS.get('n')||'Trail Summit Challenge').slice(0,40);
+  let net,room,pid,name='',me=null,wantJoin=false,lastV=-1,lastVt=0,S=null,connected=false,endAt=0,inited=false,gtitle=(QS.get('n')||'Trail Summit Challenge').slice(0,40);
   let micOK=false,motionOK=false,sensorsAsked=false,an=null,buf=null,micV=0,shakeV=0,taps=[],v=0,myAns=null,ansQ=-1,lastKey='';
   let GO=[],J=null,lockUntil=0,lockMs=2000,doneG=0,doneUntil=0,toastUntil=0,pdi=0,pdiSent=false,wraps=0,sub4=0;
   const later=ms=>setTimeout(()=>{lastKey='';draw()},ms+40);
@@ -1706,14 +1768,19 @@ const Phone=(()=>{
     try{pid=localStorage.getItem('trail_pid');name=localStorage.getItem('trail_name')||''}catch(e){}
     if(!pid){pid='p'+Math.random().toString(36).slice(2,10);try{localStorage.setItem('trail_pid',pid)}catch(e){}}
     if(QS.get('pid'))pid=QS.get('pid');
-    net=PhoneNet(room,pid,onMsg,(ok,err)=>{connected=ok;stat(ok,ok?'Terhubung ke room '+room:(err==='peer-unavailable'?'Layar host belum terbuka. Mencoba lagi…':'Menghubungkan…'));if(ok&&me)net.send({t:'join',name})});
+    net=PhoneNet(room,QS.get('k'),+QS.get('b')||0,pid,onMsg,(ok,via,changed)=>{connected=ok;
+      stat(ok,ok?(me?'Terhubung ke room '+room:'Tersambung, menunggu layar host…')+(via==='relay'?' (relay)':''):'Menghubungkan ke room '+room+'…');
+      if(ok&&changed&&wantJoin)net.send({t:'join',name})});
+    setInterval(()=>{if(wantJoin&&!me&&connected)net.send({t:'join',name})},1500);
+    setInterval(()=>{if(me&&connected)net.send({t:'hb'})},3000);
+    setTimeout(()=>{if(!connected)stat(false,'Belum tersambung. Pastikan HP terhubung internet dan scan QR terbaru dari layar.')},15000);
     draw();
     setInterval(tick,250);
     (function raf(){meter();requestAnimationFrame(raf)})();
   }
   function stat(ok,t){$('pstat').classList.toggle('on',!!ok);$('pstt').textContent=t}
   function onMsg(m){
-    if(m.t==='me'){me=m;stat(true,'Terhubung ke room '+room);draw()}
+    if(m.t==='me'){me=m;stat(true,'Terhubung ke room '+room+(net&&net.via()==='relay'?' (relay)':''));draw()}
     else if(m.t==='s'){S=m;if(m.title&&m.title!==gtitle){gtitle=m.title;document.title=gtitle;if(!me)lastKey=''}endAt=performance.now()+m.left;if(m.phase==='q'&&m.q&&m.q.i!==ansQ){myAns=null;ansQ=m.q.i}if(m.phase==='intro'||m.phase==='lobby'){ansQ=-1;myAns=null}draw()}
     else if(m.t==='st'&&S){m.teams.forEach((t,i)=>{if(S.teams[i]){S.teams[i].f=t.f;S.teams[i].r=t.r;S.teams[i].sc=t.sc}});head()}
     else if(m.t==='ord'){GO=m.list||[];if(!J)draw()}
@@ -1723,7 +1790,7 @@ const Phone=(()=>{
       if(m.done){doneG=m.done;doneUntil=now+1600;later(1600)}
       if(m.taken){toastUntil=now+1800;later(1800)}
       lastKey='';draw()}
-    else if(m.t==='who'){if(name)net.send({t:'join',name})}
+    else if(m.t==='who'){if(name){wantJoin=true;net.send({t:'join',name})}}
     else if(m.t==='full'){$('pbody').innerHTML='<div class="xsec"><div><span class="xk">Tidak bisa bergabung</span><h2 class="xh2">Room penuh</h2></div></div><p class="xp">Room ini sudah berisi 50 pemain, batas maksimal.</p>'}
   }
   function mode(){
@@ -1740,7 +1807,7 @@ const Phone=(()=>{
       if(md==='tap'){taps=taps.filter(x=>now-x<1000);v=clamp(taps.length/(S.sens.tap||8))}
       else if(md==='shout')v=micV;
       else if(md==='shake')v=shakeV;
-      net.send({t:'v',v:+v.toFixed(2)});
+      const vv=+v.toFixed(2),nw=performance.now();if(Math.abs(vv-lastV)>=.03||nw-lastVt>900){lastV=vv;lastVt=nw;net.send({t:'v',v:vv})}
     }else v=0;
     const secs=Math.max(0,Math.ceil((endAt-performance.now())/1000));document.querySelectorAll('[data-tm]').forEach(e=>e.textContent=secs);
     if(S&&S.game==='gudang'&&performance.now()<lockUntil){const h1=document.querySelector('#pbody .xhero.bad .xh');if(h1)h1.textContent='Tunggu '+Math.max(1,Math.ceil((lockUntil-performance.now())/1000))+' detik'}
@@ -1853,7 +1920,7 @@ const Phone=(()=>{
     if(!me){
       if(lastKey==='join')return;lastKey='join';
       B.innerHTML=`${QS.get('g')?'<img class="plogo" src="assets/yours-logo-white.png" alt="YOURS" onerror="this.remove()">':''}${sec('Room '+esc(room),esc(gtitle))}<p class="xp">Isi nama yang akan tampil di layar utama.</p><div class="xfield"><span>${IC.users}</span><input id="nm" maxlength="16" placeholder="Nama kamu" value="${esc(name)}" autocomplete="nickname"></div><button class="xbtn" id="jb">Gabung</button>`;
-      $('jb').onclick=()=>{name=$('nm').value.trim()||'Pemain';try{localStorage.setItem('trail_name',name)}catch(e){}net.send({t:'join',name});stat(connected,connected?'Bergabung…':'Menunggu layar host…')};
+      $('jb').onclick=()=>{name=$('nm').value.trim()||'Pemain';try{localStorage.setItem('trail_name',name)}catch(e){}wantJoin=true;net.send({t:'join',name});const b=$('jb');b.disabled=true;b.textContent=connected?'Bergabung…':'Menyambungkan…';stat(connected,connected?'Bergabung…':'Menyambungkan ke layar host…')};
       return;
     }
     if(!S)return;
